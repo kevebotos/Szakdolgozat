@@ -1,0 +1,38 @@
+# CMake build artifacts
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+install_manifest.txt
+Testing/
+
+# Object & lib files
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Executables / binaries
+stove_heat
+
+# IDE / editor
+*.swp
+*.user
+*.workspace
+*.code-workspace
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
