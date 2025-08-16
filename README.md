@@ -16,13 +16,16 @@ cmake --build build --parallel
 ```
 
 ## Project Structure
+
 - `CMakeLists.txt` - CMake build configuration
 - `src/` - Source code (`main.cpp`, `mesh.cpp`, `mesh.hpp`)
 - `stove.msh` - Mesh input file
 - `build/` - (Ignored) Out-of-source build directory
 
 ## Contributing
+
 Feel free to fork and open pull requests.
 
 ## License
+
 Specify a license (e.g., MIT) if you plan to open source this.
