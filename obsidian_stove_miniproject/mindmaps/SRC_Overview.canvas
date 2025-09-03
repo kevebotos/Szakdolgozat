@@ -1,0 +1,25 @@
+{
+	"nodes":[
+		{"id":"n_stats","type":"text","text":"Riport (kimenet):\n- Csomópontok/Háromszögek száma\n- Physical id → név lista\n- Trik száma csoportonként\n- Külső perem csomópontok (eps)\n- Égők (101–104) csomópontjai","x":520,"y":360,"width":322,"height":206},
+		{"id":"n_next","type":"text","text":"Következő lépések:\n- FEM mátrix (stacioner hővezetés)\n- Peremfeltételek (Dirichlet/Robin)\n- Lineáris megoldó\n- PPM/VTK hőtérkép export","x":120,"y":400,"width":307,"height":178},
+		{"id":"n_datamodel","type":"text","text":"Adatmodell (Mesh):\n- Node { x, y }\n- Tri { a, b, c, phys }\n- physNames: id → név\n- BBox: minx,miny,maxx,maxy\n- 1-alapú index: nodes[1..N]","x":-1000,"y":160,"width":268,"height":206},
+		{"id":"n_root","type":"text","text":"stove_miniproject – SRC Overview\n\nCél: megérteni a kód fő elemeit és az adatfolyamot a stove.msh bemenettől a konzolos összegzésig.\nMegjegyzés: csak \"text\" típusú kártyákat használunk a kompatibilitásért (vault-gyökértől függetlenül).","x":-440,"y":-600,"width":560,"height":200},
+		{"id":"n_meshhpp","type":"text","text":"Fájl: src/mesh.hpp\nSzerep: adatszerkezet és API\n- struct Mesh { Node{x,y}, Tri{a,b,c,phys}, physNames, bbox }\n- 1-alapú indexelés: nodes[1..N]\n- Deklaráció: bool load_msh2(path, mesh, log)","x":-700,"y":-300,"width":496,"height":174,"color":"1"},
+		{"id":"n_maincpp","type":"text","text":"Fájl: src/main.cpp\nSzerep: belépési pont + riport\n- CLI: --mesh/-m (alap: stove.msh)\n- Háló beolvasása (load_msh2)\n- Összegzés kiírása a konzolra","x":520,"y":-220,"width":320,"height":200,"color":"1"},
+		{"id":"n_cli","type":"text","text":"CLI és futás (main.cpp):\n- Alapértelmezett: stove.msh\n- --mesh / -m: tetszőleges háló\n- load_msh2 meghívása","x":920,"y":120,"width":280,"height":144},
+		{"id":"n_loader","type":"text","text":"Beolvasó (Gmsh v2 ASCII):\n- $PhysicalNames → physNames\n- $Nodes → nodes + bbox\n- $Elements (etype=2) → tris + phys\n- trim whitespace, robust sorolvasás","x":-280,"y":560,"width":316,"height":178},
+		{"id":"n_meshcpp","type":"text","text":"Fájl: src/mesh.cpp\nSzerep: Gmsh v2 ASCII beolvasó\n- $PhysicalNames → physNames (id→név)\n- $Nodes → nodes + bbox frissítés\n- $Elements (etype=2) → tris (a,b,c,phys)\n- trim whitespace; robusztus sorolvasás","x":20,"y":-60,"width":320,"height":276,"color":"1"},
+		{"id":"n_msh","type":"text","text":"Bemenet (Gmsh v2 ASCII)\nFájl: stove.msh\nLeírás: Téglalap főzőlap + 4 kör (égők).\nTartalom: $PhysicalNames, $Nodes, $Elements (etype=2 – háromszög)","x":-640,"y":160,"width":315,"height":145}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"n_msh","fromSide":"right","toNode":"n_meshcpp","toSide":"left","label":"Gmsh v2 ASCII bemenet"},
+		{"id":"e2","fromNode":"n_meshcpp","fromSide":"left","toNode":"n_meshhpp","toSide":"right","label":"Mesh feltöltése"},
+		{"id":"e3","fromNode":"n_meshhpp","fromSide":"right","toNode":"n_maincpp","toSide":"left","label":"Adatszerkezet használata"},
+		{"id":"e4","fromNode":"n_maincpp","fromSide":"bottom","toNode":"n_stats","toSide":"top","label":"Összegzés a konzolra"},
+		{"id":"e5","fromNode":"n_meshhpp","fromSide":"bottom","toNode":"n_datamodel","toSide":"top","label":"Definíciók"},
+		{"id":"e6","fromNode":"n_meshcpp","fromSide":"bottom","toNode":"n_loader","toSide":"top","label":"Parser logika"},
+		{"id":"e7","fromNode":"n_maincpp","fromSide":"bottom","toNode":"n_cli","toSide":"top","label":"CLI"},
+		{"id":"e8","fromNode":"n_maincpp","fromSide":"bottom","toNode":"n_next","toSide":"top","label":"Hiányzó lépések"}
+	],
+	"version":"1.0.0"
+}

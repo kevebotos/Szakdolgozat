@@ -1,0 +1,41 @@
+{
+	"nodes":[
+		{"id":"a1f2c3d4e5a6b7c8","type":"text","text":"**Pipeline áttekintés**\nKonfigurálás → Fordítás → Futtatás\n\n- CMake beolvassa a `CMakeLists.txt`-t és elkészíti a build-fájlokat.\n- A build eszköz (Make/Ninja/VS) lefordítja a kódot.\n- A kész programot bemenettel futtatod (pl. mesh fájl).","x":-300,"y":-560,"width":360,"height":266},
+		{"id":"207ae904e334601c","type":"text","text":"```bash\ncmake -S . -B build -DCMAKE_BUILD_TYPE=Release\ncmake --build build --parallel\n./build/stove_heat --mesh stove.msh\n```","x":-356,"y":-160,"width":472,"height":106},
+		{"id":"fadebabe00fedcab","type":"text","text":"### 3) Futtatás\n```bash\n./build/stove_heat --mesh stove.msh\n```\n- **./build/stove_heat**: a lefordított program.\n- **--mesh stove.msh**: parancssori opció – melyik mesh fájlt töltse be.","x":460,"y":-54,"width":380,"height":258},
+		{"id":"d00dfeedc0ffee99","type":"text","text":"### Tipp: Debug mód\n- Használd: `-D CMAKE_BUILD_TYPE=Debug` (Make/Ninja esetén), VS-ben `--config Debug`.\n- Lassabb kód, de debug szimbólumokkal (könnyebb hibakeresés).","x":-820,"y":480,"width":426,"height":181},
+		{"id":"beefbeefbeefbeef","type":"text","text":"📝 **Minikérdés**\nMelyik parancs **fordítja** le a kódot?","x":340,"y":-320,"width":300,"height":87},
+		{"id":"c0ffee12deadc0de","type":"text","text":"### 1) Konfigurálás\n```bash\ncmake -S . -B build -DCMAKE_BUILD_TYPE=Release\n```\n- **cmake**: a build-rendszer generátor.\n- **-S .**: forráskönyvtár (ahol a `CMakeLists.txt` van).\n- **-B build**: ide kerülnek a generált build fájlok (tiszta repo).\n- **-D CMAKE_BUILD_TYPE=Release**: optimalizált fordítás egykonfigurációs generátoroknál (Make/Ninja).\n> **Fejben**: ez **még nem fordít**, csak előkészíti a receptet.","x":-1080,"y":-107,"width":480,"height":393},
+		{"id":"b17db17db17db17d","type":"text","text":"### 2) Fordítás / Build\n```bash\ncmake --build build --parallel\n```\n- **--build build**: lépj a `build/`-be és fordíts a választott eszközzel.\n- **--parallel**: több maggal fordít (pl. `--parallel 4`).\n- **Eredmény**: elkészül az executable (pl. `build/stove_heat`).","x":-300,"y":49,"width":360,"height":310},
+		{"id":"abcdef1234567890","type":"text","text":"### Fogalomjegyzék\n- **Source dir**: ahol a forráskód és a `CMakeLists.txt` van.\n- **Build dir**: ide generál CMake (objektumfájlok, Make/Ninja projekt, binárisok).\n- **Generator**: a háttérben használt eszköz (Make, Ninja, VS).\n- **Target**: amit építünk (pl. `stove_heat` végrehajtható).","x":460,"y":318,"width":380,"height":324},
+		{"id":"node_minreq","type":"text","text":"**`cmake_minimum_required(VERSION 3.16)`**\nA CMake **minimum verzióját** rögzíti. Így nem fut le túl régi CMake-kel.","x":-700,"y":760,"width":364,"height":88},
+		{"id":"node_check","type":"text","text":"🧪 **Ellenőrző kérdés**\nMi a különbség a **`add_executable(...)`** és a **`target_include_directories(...)`** szerepe között?","x":1000,"y":640,"width":380,"height":120},
+		{"id":"node_addexe","type":"text","text":"**`add_executable(stove_heat src/main.cpp src/mesh.cpp)`**\nLétrehozza a **futtatható** célt. Ezeket a forrásokat fordítja és linkeli össze.","x":920,"y":880,"width":380,"height":118},
+		{"id":"node_includes","type":"text","text":"**`target_include_directories(... PRIVATE src)`**\nA header-ek keresési útvonalát bővíti (pl. `#include \"mesh.hpp\"`).","x":920,"y":1040,"width":440,"height":88},
+		{"id":"cmake_code_block","type":"text","text":"```cmake\ncmake_minimum_required(VERSION 3.16)\nproject(stove_heat LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_CXX_STANDARD_REQUIRED ON)\n\nadd_executable(stove_heat\n  src/main.cpp\n  src/mesh.cpp\n)\n\ntarget_include_directories(stove_heat PRIVATE src)\n\nif(MSVC)\n  target_compile_options(stove_heat PRIVATE /W4)\nelse()\n  target_compile_options(stove_heat PRIVATE -Wall -Wextra -Wpedantic)\nendif()\n```","x":-60,"y":846,"width":680,"height":433},
+		{"id":"node_tip","type":"text","text":"💡 **Tipp**\nKésőbb adhatsz még:\n- `target_compile_features(... cxx_std_17)`\n- `set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})`\n- `find_package(...)` ha külső lib kell","x":-60,"y":1400,"width":520,"height":206},
+		{"id":"node_std","type":"text","text":"**`set(CMAKE_CXX_STANDARD 17)` + `...REQUIRED ON`**\nA C++ **nyelvi szabvány** (C++17) beállítása és kötelezővé tétele.","x":-980,"y":1160,"width":509,"height":58},
+		{"id":"node_project","type":"text","text":"**`project(stove_heat LANGUAGES CXX)`**\nProjekt neve: `stove_heat`. Megmondjuk, hogy **C++** nyelvet használunk (CXX).","x":-660,"y":980,"width":351,"height":88},
+		{"id":"node_warnings","type":"text","text":"**Figyelmeztetések**\n`target_compile_options` → állíts szigorúbb warningokat: `/W4` (MSVC) vagy `-Wall -Wextra -Wpedantic` (GCC/Clang).","x":920,"y":1191,"width":520,"height":88},
+		{"id":"cmake_overview","type":"text","text":"## CMakeLists.txt – áttekintés\nEz a fájl írja le, **mit** és **hogyan** építsen CMake. Alább egy *minimális*, ehhez a projekthez passzoló verzió és soronkénti magyarázat.","x":0,"y":560,"width":381,"height":145}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"a1f2c3d4e5a6b7c8","fromSide":"bottom","toNode":"207ae904e334601c","toSide":"top","label":"Ez a 3 lépés"},
+		{"id":"e2","fromNode":"207ae904e334601c","fromSide":"left","toNode":"c0ffee12deadc0de","toSide":"right","label":"1) Konfigurálás"},
+		{"id":"e3","fromNode":"207ae904e334601c","fromSide":"bottom","toNode":"b17db17db17db17d","toSide":"top","label":"2) Fordítás"},
+		{"id":"e4","fromNode":"207ae904e334601c","fromSide":"right","toNode":"fadebabe00fedcab","toSide":"left","label":"3) Futtatás"},
+		{"id":"e6","fromNode":"c0ffee12deadc0de","fromSide":"bottom","toNode":"d00dfeedc0ffee99","toSide":"top","label":"Debug/Release"},
+		{"id":"e7","fromNode":"207ae904e334601c","fromSide":"right","toNode":"abcdef1234567890","toSide":"left","label":"Fogalmak"},
+		{"id":"e8","fromNode":"207ae904e334601c","fromSide":"top","toNode":"beefbeefbeefbeef","toSide":"bottom","label":"Ellenőrzés"},
+		{"id":"e9","fromNode":"c0ffee12deadc0de","fromSide":"bottom","toNode":"cmake_overview","toSide":"top","label":"CMakeLists.txt"},
+		{"id":"e10","fromNode":"cmake_overview","fromSide":"bottom","toNode":"cmake_code_block","toSide":"top","label":"Minimális példa"},
+		{"id":"e11","fromNode":"cmake_code_block","fromSide":"left","toNode":"node_minreq","toSide":"right","label":"sor 1"},
+		{"id":"e12","fromNode":"cmake_code_block","fromSide":"left","toNode":"node_project","toSide":"right","label":"sor 2"},
+		{"id":"e13","fromNode":"cmake_code_block","fromSide":"left","toNode":"node_std","toSide":"right","label":"sor 3–4"},
+		{"id":"e14","fromNode":"cmake_code_block","fromSide":"right","toNode":"node_addexe","toSide":"left","label":"sor 6–9"},
+		{"id":"e15","fromNode":"cmake_code_block","fromSide":"right","toNode":"node_includes","toSide":"left","label":"sor 11"},
+		{"id":"e16","fromNode":"cmake_code_block","fromSide":"right","toNode":"node_warnings","toSide":"left","label":"sor 13–17"},
+		{"id":"e17","fromNode":"cmake_code_block","fromSide":"bottom","toNode":"node_tip","toSide":"top","label":"továbbfejlesztés"},
+		{"id":"e18","fromNode":"cmake_overview","fromSide":"right","toNode":"node_check","toSide":"left","label":"Ellenőrzés"}
+	]
+}

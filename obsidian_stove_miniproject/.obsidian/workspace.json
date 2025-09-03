@@ -4,24 +4,24 @@
     "type": "split",
     "children": [
       {
-        "id": "a33293400c9a9dc0",
+        "id": "8d490940f93b776d",
         "type": "tabs",
         "children": [
           {
-            "id": "9cb3e32edf6c4e7c",
+            "id": "683c93301000f5bf",
             "type": "leaf",
             "state": {
               "type": "canvas",
               "state": {
-                "file": "mindmaps/outline.canvas",
+                "file": "mindmaps/SRC_Overview.canvas",
                 "viewState": {
-                  "x": -240.40352816538197,
-                  "y": 59.50782369290508,
-                  "zoom": -0.37579090933005055
+                  "x": -36.5763325244938,
+                  "y": 0.8586602605920197,
+                  "zoom": -0.41088785520082843
                 }
               },
               "icon": "lucide-layout-dashboard",
-              "title": "outline"
+              "title": "SRC_Overview"
             }
           }
         ]
@@ -163,6 +163,7 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "bases:Create new base": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
@@ -171,10 +172,11 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "9cb3e32edf6c4e7c",
+  "active": "683c93301000f5bf",
   "lastOpenFiles": [
+    "mindmaps/Pipeline.canvas",
+    "mindmaps/SRC_Overview.canvas",
     "mindmap.md",
-    "mindmaps/outline.canvas",
     "mindmaps"
   ]
 }
