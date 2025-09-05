@@ -13,15 +13,15 @@
             "state": {
               "type": "canvas",
               "state": {
-                "file": "mindmaps/SRC_Overview.canvas",
+                "file": "mindmaps/maincpp.canvas",
                 "viewState": {
-                  "x": -36.5763325244938,
-                  "y": 0.8586602605920197,
-                  "zoom": -0.41088785520082843
+                  "x": -6.250544999570841,
+                  "y": 538.4069134446495,
+                  "zoom": -0.3580846387407707
                 }
               },
               "icon": "lucide-layout-dashboard",
-              "title": "SRC_Overview"
+              "title": "maincpp"
             }
           }
         ]
@@ -174,8 +174,9 @@
   },
   "active": "683c93301000f5bf",
   "lastOpenFiles": [
-    "mindmaps/Pipeline.canvas",
     "mindmaps/SRC_Overview.canvas",
+    "mindmaps/maincpp.canvas",
+    "mindmaps/Pipeline.canvas",
     "mindmap.md",
     "mindmaps"
   ]
