@@ -1,20 +1,27 @@
 {
   "main": {
-    "id": "f234702baeb571e4",
+    "id": "f373c649192d12e6",
     "type": "split",
     "children": [
       {
-        "id": "97de23180f2931fe",
+        "id": "171f9b62529c4b0f",
         "type": "tabs",
         "children": [
           {
-            "id": "a1595f8868213c03",
+            "id": "a50d70703291dcf6",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "type": "canvas",
+              "state": {
+                "file": "obsidian_stove_miniproject/mindmaps/Pipeline.canvas",
+                "viewState": {
+                  "x": -250.72736643540816,
+                  "y": 90.66778768038719,
+                  "zoom": -0.3695201405746563
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "Pipeline"
             }
           }
         ]
@@ -23,15 +30,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "37fe7b7a41256bcd",
+    "id": "1726d1282a5bafc5",
     "type": "split",
     "children": [
       {
-        "id": "bf3542608d9c3043",
+        "id": "3be84fa7674ca2c3",
         "type": "tabs",
         "children": [
           {
-            "id": "47b93655c164727f",
+            "id": "0743052e35a6cb00",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -44,7 +51,7 @@
             }
           },
           {
-            "id": "b37918bf499857ac",
+            "id": "e1a125f219e16527",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -61,7 +68,7 @@
             }
           },
           {
-            "id": "468c528fd2a04a05",
+            "id": "d3f60597aa973498",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -77,20 +84,20 @@
     "width": 300
   },
   "right": {
-    "id": "21625092ba58d1a7",
+    "id": "732e63ad8f55df0b",
     "type": "split",
     "children": [
       {
-        "id": "2eb19fa15c64e358",
+        "id": "345b07bed9e7dbf9",
         "type": "tabs",
         "children": [
           {
-            "id": "8f767d467a767a38",
+            "id": "4191c985201b197a",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "mindmaps/outline.canvas",
+                "file": "obsidian_stove_miniproject/mindmaps/Pipeline.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -100,25 +107,25 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for outline"
+              "title": "Backlinks for Pipeline"
             }
           },
           {
-            "id": "257d85f420eb96df",
+            "id": "0c2f82e86be9e990",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "mindmaps/outline.canvas",
+                "file": "obsidian_stove_miniproject/mindmaps/Pipeline.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from outline"
+              "title": "Outgoing links from Pipeline"
             }
           },
           {
-            "id": "83e7203028cd70d8",
+            "id": "270d011f4e68789d",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -133,18 +140,18 @@
             }
           },
           {
-            "id": "30cba5037fb5f8e9",
+            "id": "ae5124793e0324e2",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "mindmaps/outline.canvas",
+                "file": "obsidian_stove_miniproject/mindmaps/Pipeline.canvas",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of outline"
+              "title": "Outline of Pipeline"
             }
           }
         ]
@@ -156,21 +163,27 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "bases:Create new base": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
-      "command-palette:Open command palette": false
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
     }
   },
-  "active": "47b93655c164727f",
+  "active": "a50d70703291dcf6",
   "lastOpenFiles": [
-    "mindmaps/maincpp.canvas",
-    "mindmaps/Pipeline.canvas",
-    "mindmaps/SRC_Overview.canvas",
-    "mindmap.md",
-    "mindmaps"
+    "build/stove_heat",
+    "build/CMakeFiles/Progress/3",
+    "build/CMakeFiles/stove_heat.dir/src/mesh.cpp.o",
+    "build/CMakeFiles/stove_heat.dir/src/mesh.cpp.o.d",
+    "build/CMakeFiles/stove_heat.dir/src/mesh.cpp-71f6a4d4.o.tmp",
+    "build/CMakeFiles/Progress/2",
+    "build/CMakeFiles/stove_heat.dir/src/main.cpp.o",
+    "build/CMakeFiles/stove_heat.dir/src/main.cpp.o.d",
+    "build/CMakeFiles/stove_heat.dir/src/main.cpp-4edb1a8a.o.tmp",
+    "build/CMakeFiles/Progress/count.txt",
+    "build/CMakeFiles/Progress/1"
   ]
 }

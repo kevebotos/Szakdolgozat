@@ -11,9 +11,3 @@ add_executable(stove_heat
 
 target_include_directories(stove_heat PRIVATE src)
 
-# Opcionális, de hasznos figyelmeztetések
-if(MSVC)
-  target_compile_options(stove_heat PRIVATE /W4 /permissive-)
-else()
-  target_compile_options(stove_heat PRIVATE -Wall -Wextra -Wpedantic -O2)
-endif()
