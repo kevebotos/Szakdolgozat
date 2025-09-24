@@ -1,9 +1,11 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <limits>
+#include <cstddef>
 #include <iosfwd> // std::ostream elődeklaráció
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 struct Mesh
 {
@@ -31,5 +33,25 @@ struct Mesh
   double maxy = -std::numeric_limits<double>::infinity();
 };
 
-// MSH v2 ASCII beolvasás (Nodes, Elements[etype=2], PhysicalNames). true = siker
-bool load_msh2(const std::string &path, Mesh &mesh, std::ostream &log);
+class MeshError : public std::runtime_error
+{
+public:
+  using std::runtime_error::runtime_error;
+};
+
+class MeshParseError : public MeshError
+{
+public:
+  MeshParseError(std::size_t line, const std::string &message)
+      : MeshError(message), m_line(line)
+  {
+  }
+
+  std::size_t line() const noexcept { return m_line; }
+
+private:
+  std::size_t m_line = 0;
+};
+
+// MSH v2 ASCII beolvasás (Nodes, Elements[etype=2], PhysicalNames). Siker esetén mesh feltöltve, egyébként MeshError kivétel dobódik.
+void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log);

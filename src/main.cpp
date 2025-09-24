@@ -1,4 +1,5 @@
 #include "mesh.hpp"
+#include <exception>
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
@@ -9,6 +10,10 @@ static double compute_eps(const Mesh &m)
 {
   const double dx = m.maxx - m.minx;
   const double dy = m.maxy - m.miny;
+  if (!std::isfinite(dx) || !std::isfinite(dy))
+  {
+    return 1e-12;
+  }
   const double scale = std::max(dx, dy);
   return std::max(1e-12, scale * 1e-9); // nagyon kicsi, de a bbox-hoz igazodik
 }
@@ -25,9 +30,23 @@ int main(int argc, char **argv)
   }
 
   Mesh M;
-  if (!load_msh2(meshPath, M, std::cout))
+  try
   {
-    std::cerr << "Sikertelen hálóbeolvasás.\n";
+    load_msh2(meshPath, M, std::cout);
+  }
+  catch (const MeshParseError &ex)
+  {
+    std::cerr << "Hálóbeolvasási hiba (sor " << ex.line() << "): " << ex.what() << "\n";
+    return 1;
+  }
+  catch (const MeshError &ex)
+  {
+    std::cerr << "Hálóbeolvasási hiba: " << ex.what() << "\n";
+    return 1;
+  }
+  catch (const std::exception &ex)
+  {
+    std::cerr << "Váratlan hiba: " << ex.what() << "\n";
     return 1;
   }
 
@@ -91,6 +110,6 @@ int main(int argc, char **argv)
   }
   std::cout << "  Égőkhöz tartozó (belső) csomópontok (összesen): " << burnerNodes.size() << " db\n";
 
-  std::cout << "\nMinden rendben. Következő lépés: FEM megoldó + PPM hőtérkép.\n";
+  std::cout << "\n Noice!\n";
   return 0;
 }
