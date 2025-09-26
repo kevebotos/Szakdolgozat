@@ -12,14 +12,62 @@
 // levágja az elejéről/végéről a whitespace-et (CRLF esetén a '\r'-t is)
 static inline void trim_inplace(std::string &s)
 {
-  auto isws = [](unsigned char c)
-  { return std::isspace(c) != 0; };
-  // eleje
-  auto it = std::find_if_not(s.begin(), s.end(), isws);
-  s.erase(s.begin(), it);
-  // vége
-  while (!s.empty() && isws(static_cast<unsigned char>(s.back())))
+  // Távolítsuk el az elejéről a whitespace karaktereket
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
+  {
+    s.erase(s.begin());
+  }
+  // Távolítsuk el a végéről a whitespace karaktereket (CRLF esetén a '\r'-t is)
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
+  {
     s.pop_back();
+  }
+}
+
+// Egyszerű, kezdőbarát segédfüggvények a dobásokhoz és számlálósor olvasásához
+namespace
+{
+  [[noreturn]] void throw_at_line(std::size_t currentLine, const std::string &message)
+  {
+    throw MeshParseError(currentLine, message);
+  }
+
+  std::size_t read_count(std::istream &in, std::size_t &lineNo, const char *sectionToken)
+  {
+    std::string countLine;
+    const std::size_t expectedLine = lineNo + 1;
+    if (!std::getline(in, countLine))
+    {
+      throw_at_line(expectedLine, std::string("Váratlan fájlvég a(z) ") + sectionToken + " blokk elején.");
+    }
+    lineNo = expectedLine;
+    trim_inplace(countLine);
+    if (countLine.empty())
+    {
+      throw_at_line(lineNo, std::string("Hiányzó elemszám a(z) ") + sectionToken + " blokk elején.");
+    }
+
+    std::size_t count = 0;
+    std::istringstream iss(countLine);
+    if (!(iss >> count))
+    {
+      throw_at_line(lineNo, std::string("Érvénytelen elemszám a(z) ") + sectionToken + " blokkban: \"" + countLine + "\"");
+    }
+    char extra = '\0';
+    if (iss >> extra)
+    {
+      throw_at_line(lineNo, std::string("Túl sok adat a(z) ") + sectionToken + " elemszám sorában: \"" + countLine + "\"");
+    }
+    return count;
+  }
+
+  void check_node_id_or_throw(int nodeId, const Mesh &mesh, std::size_t lineNo)
+  {
+    if (nodeId <= 0 || static_cast<std::size_t>(nodeId) >= mesh.nodes.size())
+    {
+      throw_at_line(lineNo, "Háromszög elem érvénytelen csomópont azonosítóval: " + std::to_string(nodeId));
+    }
+  }
 }
 
 void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
@@ -49,44 +97,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
   std::size_t elemsToRead = 0, elemsRead = 0;
   std::vector<bool> nodeSeen;
 
-  auto throw_parse = [&](std::size_t errorLine, const std::string &message) -> void
-  {
-    throw MeshParseError(errorLine, message);
-  };
-
-  auto throw_current = [&](const std::string &message) -> void
-  {
-    throw_parse(lineNo, message);
-  };
-
-  auto read_count = [&](const char *sectionToken) -> std::size_t
-  {
-    std::string countLine;
-    const std::size_t expectedLine = lineNo + 1;
-    if (!std::getline(in, countLine))
-    {
-      throw_parse(expectedLine, std::string("Váratlan fájlvég a(z) ") + sectionToken + " blokk elején.");
-    }
-    lineNo = expectedLine;
-    trim_inplace(countLine);
-    if (countLine.empty())
-    {
-      throw_current(std::string("Hiányzó elemszám a(z) ") + sectionToken + " blokk elején.");
-    }
-
-    std::size_t count = 0;
-    std::istringstream iss(countLine);
-    if (!(iss >> count))
-    {
-      throw_current(std::string("Érvénytelen elemszám a(z) ") + sectionToken + " blokkban: \"" + countLine + "\"");
-    }
-    char extra = '\0';
-    if (iss >> extra)
-    {
-      throw_current(std::string("Túl sok adat a(z) ") + sectionToken + " elemszám sorában: \"" + countLine + "\"");
-    }
-    return count;
-  };
+  // Lambdák helyett egyszerű segédfüggvényeket használunk (lásd fentebb)
 
   while (std::getline(in, line))
   {
@@ -101,10 +112,10 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       {
         if (state != State::None)
         {
-          throw_current("Új blokk indult a meglévő befejezése előtt: $PhysicalNames");
+          throw_at_line(lineNo, "Új blokk indult a meglévő befejezése előtt: $PhysicalNames");
         }
         state = State::PhysicalNames;
-        physToRead = read_count("$PhysicalNames");
+        physToRead = read_count(in, lineNo, "$PhysicalNames");
         physRead = 0;
         continue;
       }
@@ -112,11 +123,11 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       {
         if (state != State::PhysicalNames)
         {
-          throw_current("Váratlan $EndPhysicalNames.");
+          throw_at_line(lineNo, "Váratlan $EndPhysicalNames.");
         }
         if (physRead != physToRead)
         {
-          throw_current("A $PhysicalNames blokk sorainak száma eltér a megadottól.");
+          throw_at_line(lineNo, "A $PhysicalNames blokk sorainak száma eltér a megadottól.");
         }
         state = State::None;
         continue;
@@ -126,10 +137,10 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       {
         if (state != State::None)
         {
-          throw_current("Új blokk indult a meglévő befejezése előtt: $Nodes");
+          throw_at_line(lineNo, "Új blokk indult a meglévő befejezése előtt: $Nodes");
         }
         state = State::Nodes;
-        nodesToRead = read_count("$Nodes");
+        nodesToRead = read_count(in, lineNo, "$Nodes");
         result.nodes.assign(nodesToRead + 1, Mesh::Node{});
         nodeSeen.assign(nodesToRead + 1, false);
         result.minx = std::numeric_limits<double>::infinity();
@@ -143,17 +154,17 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       {
         if (state != State::Nodes)
         {
-          throw_current("Váratlan $EndNodes.");
+          throw_at_line(lineNo, "Váratlan $EndNodes.");
         }
         if (nodesRead != nodesToRead)
         {
-          throw_current("A $Nodes blokkban a megadott elemszám nem egyezik a beolvasott sorok számával.");
+          throw_at_line(lineNo, "A $Nodes blokkban a megadott elemszám nem egyezik a beolvasott sorok számával.");
         }
         for (std::size_t id = 1; id < nodeSeen.size(); ++id)
         {
           if (!nodeSeen[id])
           {
-            throw_current("Hiányzó csomópont azonosító: " + std::to_string(id));
+            throw_at_line(lineNo, "Hiányzó csomópont azonosító: " + std::to_string(id));
           }
         }
         state = State::None;
@@ -164,10 +175,10 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       {
         if (state != State::None)
         {
-          throw_current("Új blokk indult a meglévő befejezése előtt: $Elements");
+          throw_at_line(lineNo, "Új blokk indult a meglévő befejezése előtt: $Elements");
         }
         state = State::Elements;
-        elemsToRead = read_count("$Elements");
+        elemsToRead = read_count(in, lineNo, "$Elements");
         result.tris.clear();
         result.tris.reserve(elemsToRead);
         elemsRead = 0;
@@ -177,11 +188,11 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       {
         if (state != State::Elements)
         {
-          throw_current("Váratlan $EndElements.");
+          throw_at_line(lineNo, "Váratlan $EndElements.");
         }
         if (elemsRead != elemsToRead)
         {
-          throw_current("A $Elements blokk sorainak száma eltér a megadottól.");
+          throw_at_line(lineNo, "A $Elements blokk sorainak száma eltér a megadottól.");
         }
         state = State::None;
         continue;
@@ -189,7 +200,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
 
       if (state != State::None)
       {
-        throw_current("Ismeretlen blokk kezdete egy másik blokk lezárása előtt: " + line);
+        throw_at_line(lineNo, "Ismeretlen blokk kezdete egy másik blokk lezárása előtt: " + line);
       }
 
       const std::string sectionName = line.substr(1);
@@ -207,7 +218,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       }
       if (!foundEnd)
       {
-        throw_current("Ismeretlen blokk lezárása hiányzik: " + endToken);
+        throw_at_line(lineNo, "Ismeretlen blokk lezárása hiányzik: " + endToken);
       }
       continue;
     }
@@ -218,18 +229,18 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
     {
       if (physRead >= physToRead)
       {
-        throw_current("Túl sok sor a $PhysicalNames blokkban.");
+        throw_at_line(lineNo, "Túl sok sor a $PhysicalNames blokkban.");
       }
       std::istringstream iss(line);
       int dim = 0;
       int id = -1;
       if (!(iss >> dim >> id))
       {
-        throw_current("Érvénytelen sor a $PhysicalNames blokkban: \"" + line + "\"");
+        throw_at_line(lineNo, "Érvénytelen sor a $PhysicalNames blokkban: \"" + line + "\"");
       }
       if (id < 0)
       {
-        throw_current("Negatív fizikai azonosító: " + std::to_string(id));
+        throw_at_line(lineNo, "Negatív fizikai azonosító: " + std::to_string(id));
       }
       std::string name;
       auto q1 = line.find('"');
@@ -245,7 +256,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       auto inserted = result.physNames.emplace(id, name);
       if (!inserted.second)
       {
-        throw_current("Duplikált fizikai azonosító: " + std::to_string(id));
+        throw_at_line(lineNo, "Duplikált fizikai azonosító: " + std::to_string(id));
       }
       ++physRead;
       break;
@@ -254,22 +265,22 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
     {
       if (nodesRead >= nodesToRead)
       {
-        throw_current("Túl sok sor a $Nodes blokkban.");
+        throw_at_line(lineNo, "Túl sok sor a $Nodes blokkban.");
       }
       std::istringstream iss(line);
       int id = 0;
       double x = 0.0, y = 0.0, z = 0.0;
       if (!(iss >> id >> x >> y >> z))
       {
-        throw_current("Érvénytelen csomópont sor: \"" + line + "\"");
+        throw_at_line(lineNo, "Érvénytelen csomópont sor: \"" + line + "\"");
       }
       if (id <= 0 || static_cast<std::size_t>(id) >= result.nodes.size())
       {
-        throw_current("Csomópont azonosító tartományon kívül: " + std::to_string(id));
+        throw_at_line(lineNo, "Csomópont azonosító tartományon kívül: " + std::to_string(id));
       }
       if (nodeSeen[static_cast<std::size_t>(id)])
       {
-        throw_current("Duplikált csomópont azonosító: " + std::to_string(id));
+        throw_at_line(lineNo, "Duplikált csomópont azonosító: " + std::to_string(id));
       }
       nodeSeen[static_cast<std::size_t>(id)] = true;
       result.nodes[static_cast<std::size_t>(id)].x = x;
@@ -285,7 +296,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
     {
       if (elemsRead >= elemsToRead)
       {
-        throw_current("Túl sok sor a $Elements blokkban.");
+        throw_at_line(lineNo, "Túl sok sor a $Elements blokkban.");
       }
       std::istringstream iss(line);
       int eid = 0;
@@ -293,11 +304,11 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       int ntags = 0;
       if (!(iss >> eid >> etype >> ntags))
       {
-        throw_current("Érvénytelen elem sor: \"" + line + "\"");
+        throw_at_line(lineNo, "Érvénytelen elem sor: \"" + line + "\"");
       }
       if (ntags < 0)
       {
-        throw_current("Negatív tag szám az elem sorban: " + std::to_string(ntags));
+        throw_at_line(lineNo, "Negatív tag szám az elem sorban: " + std::to_string(ntags));
       }
       std::vector<int> tags;
       tags.reserve(static_cast<std::size_t>(ntags));
@@ -306,7 +317,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
         int tagValue = 0;
         if (!(iss >> tagValue))
         {
-          throw_current("Nem olvasható ki a(z) " + std::to_string(t + 1) + ". tag értéke.");
+          throw_at_line(lineNo, "Nem olvasható ki a(z) " + std::to_string(t + 1) + ". tag értéke.");
         }
         tags.push_back(tagValue);
       }
@@ -316,18 +327,11 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
         int n1 = 0, n2 = 0, n3 = 0;
         if (!(iss >> n1 >> n2 >> n3))
         {
-          throw_current("Háromszög elemhez hiányoznak a csomópont azonosítók.");
+          throw_at_line(lineNo, "Háromszög elemhez hiányoznak a csomópont azonosítók.");
         }
-        auto checkNodeId = [&](int nodeId)
-        {
-          if (nodeId <= 0 || static_cast<std::size_t>(nodeId) >= result.nodes.size())
-          {
-            throw_current("Háromszög elem érvénytelen csomópont azonosítóval: " + std::to_string(nodeId));
-          }
-        };
-        checkNodeId(n1);
-        checkNodeId(n2);
-        checkNodeId(n3);
+        check_node_id_or_throw(n1, result, lineNo);
+        check_node_id_or_throw(n2, result, lineNo);
+        check_node_id_or_throw(n3, result, lineNo);
         const int phys = (ntags >= 1 ? tags[0] : -1);
         result.tris.push_back({n1, n2, n3, phys});
       }
@@ -335,13 +339,13 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       break;
     }
     case State::None:
-      throw_current("Adatsor érkezett aktív blokk nélkül.");
+      throw_at_line(lineNo, "Adatsor érkezett aktív blokk nélkül.");
     }
   }
 
   if (state != State::None)
   {
-    throw_current("A fájl vége előtt nem zárult le a blokk.");
+    throw_at_line(lineNo, "A fájl vége előtt nem zárult le a blokk.");
   }
 
   mesh = std::move(result);

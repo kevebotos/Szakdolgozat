@@ -6,6 +6,11 @@
 #include <cmath>
 #include <cstring>
 
+static bool is_burner(int phys)
+{
+  return phys == 101 || phys == 102 || phys == 103 || phys == 104;
+}
+
 static double compute_eps(const Mesh &m)
 {
   const double dx = m.maxx - m.minx;
@@ -96,8 +101,6 @@ int main(int argc, char **argv)
   std::cout << "  Külső perem (geometriai) csomópontok: " << outer.size() << " db\n";
 
   // Égők (Burner 1..4) csomópontjai — háromszög-fizikai ID alapján
-  auto is_burner = [&](int phys)
-  { return phys == 101 || phys == 102 || phys == 103 || phys == 104; };
   std::unordered_set<int> burnerNodes;
   for (const auto &t : M.tris)
   {
