@@ -1,0 +1,40 @@
+# Simplified two-group cross sections for a VVER-440 like assembly
+title = "VVER-440 two-group cross sections"
+no_energy = 2
+
+
+[Material "Fuel"]
+sigma_t 0.90 0.50
+sigma_a 0.08
+nu_sigma_f 0.45
+chi 1.0
+scatter 0.80, 0.02
+        1.32, 0.90
+
+
+[Material Cladding]
+sigma_t = 0.32
+sigma_a = 0.01
+nu_sigma_f = 0.0
+chi = 0.0
+scatter = 0.30, 0.00
+
+
+
+[Material Moderator]
+sigma_t = 0.45
+sigma_a = 0.0005
+nu_sigma_f = 0.0
+chi = 0.0
+scatter = 0.44, 0.005
+
+
+
+[Material Reflector]
+sigma_t = 0.70
+sigma_a = 0.02
+nu_sigma_f = 0.0
+chi = 0.0
+scatter = 0.65, 0.03
+
+
