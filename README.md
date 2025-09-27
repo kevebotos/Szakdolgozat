@@ -8,7 +8,7 @@ cmake --build build --parallel
 ## Run
 
 ```bash
-./build/stove_heat --mesh stove.msh
+./build/stove_heat --mesh vver440.msh
 ```
 
 ## Project Structure

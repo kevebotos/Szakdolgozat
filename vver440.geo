@@ -41,7 +41,7 @@ For k In {0:5}
   px = innerRadius * Cos(angle);
   py = innerRadius * Sin(angle);
   pt = newp;
-  Point(pt) = {px, py, 0, lcModerator};
+  Point(pt) = {px, py, 0, karModerator};
   innerPts[] += {pt};
 EndFor
 
@@ -67,7 +67,7 @@ For k In {0:5}
   px = outerRadius * Cos(angle);
   py = outerRadius * Sin(angle);
   pt = newp;
-  Point(pt) = {px, py, 0, lcBoundary};
+  Point(pt) = {px, py, 0, karBoundary};
   outerPts[] += {pt};
 EndFor
 
@@ -130,7 +130,25 @@ MeshSize{ PointsOf{ Surface{moderatorSurface}; } } = karModerator;
 MeshSize{ PointsOf{ Surface{boundarySurface}; } } = karBoundary;
 
 // --- Physical groups.. ---
+// 2D anyagterek
 Physical Surface("Fuel", 1) = {fuelSurfaces[]};        // Fuel pellets
 Physical Surface("Cladding", 2) = {cladSurfaces[]};    // Zircaloy cladding
 Physical Surface("Moderator", 3) = {moderatorSurface}; // Moderátor
 Physical Surface("Reflector", 4) = {boundarySurface};  // Hexagon wrapper / reflektor
+
+// 1D határok
+// - ÜA–köpeny határ: a pellet felületeinek határgörbéi
+fuelCurves[] = Boundary{ Surface{fuelSurfaces[]}; };
+Physical Curve("Fuel-Clad", 11) = {fuelCurves[]};
+
+// - Köpeny–moderátor határ: a köpeny külső körei (cladSurfaces határából a fuel-curvék kivonva)
+cladAllCurves[] = Boundary{ Surface{cladSurfaces[]}; };
+cladModeratorCurves[] = cladAllCurves[];
+cladModeratorCurves[] -= {fuelCurves[]};
+Physical Curve("Clad-Moderator", 12) = {cladModeratorCurves[]};
+
+// - Moderátor–reflektor határ: belső hexagon élei
+Physical Curve("Moderator-Reflector", 13) = {innerLines[]};
+
+// - Külső perem: külső hexagon élei
+Physical Curve("Outer-Boundary", 14) = {outerLines[]};

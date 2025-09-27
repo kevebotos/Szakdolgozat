@@ -1,10 +1,9 @@
 #pragma once
 #include <cstddef>
 #include <iosfwd> // std::ostream elődeklaráció
-#include <limits>
+#include <map>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 struct Mesh
@@ -18,19 +17,21 @@ struct Mesh
     int a = 0, b = 0, c = 0;
     int phys = -1;
   };
+  struct Line
+  {
+    int a = 0, b = 0;
+    int phys = -1;
+  };
 
   // 1-based indexelés: nodes[0] nem használt; nodes[1..N]
   std::vector<Node> nodes;
   std::vector<Tri> tris;
+  std::vector<Line> lines;
 
   // Physical ID -> név (a $PhysicalNames szekcióból)
-  std::unordered_map<int, std::string> physNames;
+  std::map<int, std::string> physNames;
 
-  // Gyors bbox
-  double minx = std::numeric_limits<double>::infinity();
-  double miny = std::numeric_limits<double>::infinity();
-  double maxx = -std::numeric_limits<double>::infinity();
-  double maxy = -std::numeric_limits<double>::infinity();
+  // BBox megszüntetve – a határokhoz 1D elemeket használunk
 };
 
 class MeshError : public std::runtime_error

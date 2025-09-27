@@ -4,8 +4,6 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include <limits>
-#include <algorithm>
 #include <cctype>
 #include <utility>
 
@@ -65,148 +63,286 @@ namespace
   {
     if (nodeId <= 0 || static_cast<std::size_t>(nodeId) >= mesh.nodes.size())
     {
-      throw_at_line(lineNo, "Háromszög elem érvénytelen csomópont azonosítóval: " + std::to_string(nodeId));
+      throw_at_line(lineNo, "Elem érvénytelen csomópont azonosítóval: " + std::to_string(nodeId));
     }
   }
 }
 
 void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
 {
-  std::ifstream in(path);
-  if (!in)
+  std::ifstream input(path);
+  if (!input)
   {
     throw MeshError("Nem tudtam megnyitni a hálófájlt: " + path);
   }
 
-  Mesh result;
+  Mesh fresh;                      // Ide töltjük be a kész hálót
+  std::string line;                // Az aktuálisan olvasott sor
+  std::size_t lineNo = 0;          // Hibaüzenethez: hanyadik sorban járunk
+  std::vector<bool> nodeSeen;      // Segít figyelni, hogy minden csomópont ID egyszer szerepeljen
 
-  enum class State
-  {
-    None,
-    PhysicalNames,
-    Nodes,
-    Elements
-  };
-  State state = State::None;
-
-  std::string line;
-  std::size_t lineNo = 0;
-
-  std::size_t physToRead = 0, physRead = 0;
-  std::size_t nodesToRead = 0, nodesRead = 0;
-  std::size_t elemsToRead = 0, elemsRead = 0;
-  std::vector<bool> nodeSeen;
-
-  // Lambdák helyett egyszerű segédfüggvényeket használunk (lásd fentebb)
-
-  while (std::getline(in, line))
+  while (std::getline(input, line))
   {
     ++lineNo;
     trim_inplace(line);
     if (line.empty())
-      continue;
-
-    if (line[0] == '$')
     {
-      if (line == "$PhysicalNames")
+      continue; // Üres sor: lépjünk tovább
+    }
+
+    // --- 1) Physical nevek ---
+    if (line == "$PhysicalNames")
+    {
+      const std::size_t physCount = read_count(input, lineNo, "$PhysicalNames");
+      for (std::size_t i = 0; i < physCount; ++i)
       {
-        if (state != State::None)
+        if (!std::getline(input, line))
         {
-          throw_at_line(lineNo, "Új blokk indult a meglévő befejezése előtt: $PhysicalNames");
+          throw_at_line(lineNo + 1, "$PhysicalNames blokk vége előtt elfogyott a fájl.");
         }
-        state = State::PhysicalNames;
-        physToRead = read_count(in, lineNo, "$PhysicalNames");
-        physRead = 0;
-        continue;
-      }
-      if (line == "$EndPhysicalNames")
-      {
-        if (state != State::PhysicalNames)
+        ++lineNo;
+        trim_inplace(line);
+        if (line.empty())
         {
-          throw_at_line(lineNo, "Váratlan $EndPhysicalNames.");
+          throw_at_line(lineNo, "$PhysicalNames sor üres.");
         }
-        if (physRead != physToRead)
+
+        std::istringstream iss(line);
+        int dimension = 0;
+        int physId = -1;
+        if (!(iss >> dimension >> physId))
         {
-          throw_at_line(lineNo, "A $PhysicalNames blokk sorainak száma eltér a megadottól.");
+          throw_at_line(lineNo, "Nem tudom kiolvasni a fizikai azonosítót ebből a sorból: \"" + line + "\"");
         }
-        state = State::None;
-        continue;
+        if (physId < 0)
+        {
+          throw_at_line(lineNo, "A fizikai azonosító nem lehet negatív: " + std::to_string(physId));
+        }
+
+        // A név idézőjelben van (pl. "Fuel"). Ha nincs idézőjel, marad üres string.
+        std::string name;
+        std::size_t firstQuote = line.find('"');
+        std::size_t secondQuote = line.rfind('"');
+        if (firstQuote != std::string::npos && secondQuote != std::string::npos && secondQuote > firstQuote)
+        {
+          name = line.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+        }
+
+        if (fresh.physNames.count(physId) != 0)
+        {
+          throw_at_line(lineNo, "Ez a fizikai azonosító már szerepelt: " + std::to_string(physId));
+        }
+        fresh.physNames[physId] = name;
       }
 
-      if (line == "$Nodes")
+      // Blokk lezárása kötelező: $EndPhysicalNames
+      if (!std::getline(input, line))
       {
-        if (state != State::None)
-        {
-          throw_at_line(lineNo, "Új blokk indult a meglévő befejezése előtt: $Nodes");
-        }
-        state = State::Nodes;
-        nodesToRead = read_count(in, lineNo, "$Nodes");
-        result.nodes.assign(nodesToRead + 1, Mesh::Node{});
-        nodeSeen.assign(nodesToRead + 1, false);
-        result.minx = std::numeric_limits<double>::infinity();
-        result.miny = std::numeric_limits<double>::infinity();
-        result.maxx = -std::numeric_limits<double>::infinity();
-        result.maxy = -std::numeric_limits<double>::infinity();
-        nodesRead = 0;
-        continue;
+        throw_at_line(lineNo + 1, "Hiányzik a $EndPhysicalNames sor.");
       }
-      if (line == "$EndNodes")
+      ++lineNo;
+      trim_inplace(line);
+      if (line != "$EndPhysicalNames")
       {
-        if (state != State::Nodes)
+        throw_at_line(lineNo, "A $PhysicalNames blokkot $EndPhysicalNames sorral kell zárni.");
+      }
+      continue;
+    }
+
+    // --- 2) Csomópontok ---
+    if (line == "$Nodes")
+    {
+      const std::size_t nodeCount = read_count(input, lineNo, "$Nodes");
+
+      // A msh v2 fájl 1-alapú azonosítókat használ, ezért +1 elemet foglalunk.
+      fresh.nodes.assign(nodeCount + 1, Mesh::Node{});
+      nodeSeen.assign(nodeCount + 1, false);
+
+      for (std::size_t i = 0; i < nodeCount; ++i)
+      {
+        if (!std::getline(input, line))
         {
-          throw_at_line(lineNo, "Váratlan $EndNodes.");
+          throw_at_line(lineNo + 1, "$Nodes blokk közben elfogyott a fájl.");
         }
-        if (nodesRead != nodesToRead)
+        ++lineNo;
+        trim_inplace(line);
+        if (line.empty())
         {
-          throw_at_line(lineNo, "A $Nodes blokkban a megadott elemszám nem egyezik a beolvasott sorok számával.");
+          throw_at_line(lineNo, "Üres sor a $Nodes blokkban.");
         }
-        for (std::size_t id = 1; id < nodeSeen.size(); ++id)
+
+        std::istringstream iss(line);
+        int nodeId = 0;
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0; // a VVER háló 2D, de a formátum igényli a harmadik számot is
+        if (!(iss >> nodeId >> x >> y >> z))
         {
-          if (!nodeSeen[id])
+          throw_at_line(lineNo, "Nem tudom kiolvasni a csomópont adatait ebből a sorból: \"" + line + "\"");
+        }
+        if (nodeId <= 0 || static_cast<std::size_t>(nodeId) >= fresh.nodes.size())
+        {
+          throw_at_line(lineNo, "A csomópont azonosító kívül esik a megengedett tartományon: " + std::to_string(nodeId));
+        }
+        if (nodeSeen[static_cast<std::size_t>(nodeId)])
+        {
+          throw_at_line(lineNo, "Csomópont azonosító ismétlődik: " + std::to_string(nodeId));
+        }
+
+        nodeSeen[static_cast<std::size_t>(nodeId)] = true;
+        fresh.nodes[static_cast<std::size_t>(nodeId)].x = x;
+        fresh.nodes[static_cast<std::size_t>(nodeId)].y = y;
+      }
+
+      // Ha hiányzik bármelyik azonosító, az hiba.
+      for (std::size_t id = 1; id < nodeSeen.size(); ++id)
+      {
+        if (!nodeSeen[id])
+        {
+          throw_at_line(lineNo, "Hiányzik ez a csomópont azonosító: " + std::to_string(id));
+        }
+      }
+
+      if (!std::getline(input, line))
+      {
+        throw_at_line(lineNo + 1, "Hiányzik a $EndNodes sor.");
+      }
+      ++lineNo;
+      trim_inplace(line);
+      if (line != "$EndNodes")
+      {
+        throw_at_line(lineNo, "A $Nodes blokkot $EndNodes sorral kell lezárni.");
+      }
+      continue;
+    }
+
+    // --- 3) Elemek (1D + 2D) ---
+    if (line == "$Elements")
+    {
+      const std::size_t elementCount = read_count(input, lineNo, "$Elements");
+
+      fresh.lines.clear();
+      fresh.tris.clear();
+      fresh.lines.reserve(elementCount);
+      fresh.tris.reserve(elementCount);
+
+      std::size_t skipped = 0; // Ha más típus is felbukkan, ezt jelezzük majd logban
+
+      for (std::size_t i = 0; i < elementCount; ++i)
+      {
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "$Elements blokk közben elfogyott a fájl.");
+        }
+        ++lineNo;
+        trim_inplace(line);
+        if (line.empty())
+        {
+          throw_at_line(lineNo, "Üres sor a $Elements blokkban.");
+        }
+
+        std::istringstream iss(line);
+        int elemId = 0;
+        int elemType = 0;
+        int tagCount = 0;
+        if (!(iss >> elemId >> elemType >> tagCount))
+        {
+          throw_at_line(lineNo, "Nem tudom kiolvasni az elem fejléct ebből a sorból: \"" + line + "\"");
+        }
+        if (tagCount < 0)
+        {
+          throw_at_line(lineNo, "A tag darabszám nem lehet negatív: " + std::to_string(tagCount));
+        }
+
+        int physicalId = -1;
+        for (int t = 0; t < tagCount; ++t)
+        {
+          int tagValue = 0;
+          if (!(iss >> tagValue))
           {
-            throw_at_line(lineNo, "Hiányzó csomópont azonosító: " + std::to_string(id));
+            throw_at_line(lineNo, "Nem tudom beolvasni a(z) " + std::to_string(t + 1) + ". taget az elem sorában.");
+          }
+          if (t == 0)
+          {
+            physicalId = tagValue; // Az első tag a fizikai azonosító
           }
         }
-        state = State::None;
-        continue;
+
+        if (elemType == 1)
+        {
+          int n1 = 0;
+          int n2 = 0;
+          if (!(iss >> n1 >> n2))
+          {
+            throw_at_line(lineNo, "A vonal elemhez két csomópont azonosítót várok.");
+          }
+          check_node_id_or_throw(n1, fresh, lineNo);
+          check_node_id_or_throw(n2, fresh, lineNo);
+
+          Mesh::Line edge;
+          edge.a = n1;
+          edge.b = n2;
+          edge.phys = physicalId;
+          fresh.lines.push_back(edge);
+        }
+        else if (elemType == 2)
+        {
+          int n1 = 0;
+          int n2 = 0;
+          int n3 = 0;
+          if (!(iss >> n1 >> n2 >> n3))
+          {
+            throw_at_line(lineNo, "A háromszög elemhez három csomópont azonosítót várok.");
+          }
+          check_node_id_or_throw(n1, fresh, lineNo);
+          check_node_id_or_throw(n2, fresh, lineNo);
+          check_node_id_or_throw(n3, fresh, lineNo);
+
+          Mesh::Tri tri;
+          tri.a = n1;
+          tri.b = n2;
+          tri.c = n3;
+          tri.phys = physicalId;
+          fresh.tris.push_back(tri);
+        }
+        else
+        {
+          // Más elem-típus (pl. 3D elem). Egyszerűen átugorjuk őket.
+          int unused = 0;
+          while (iss >> unused)
+          {
+            // csak kiolvassuk a hátralévő számokat
+          }
+          ++skipped;
+        }
       }
 
-      if (line == "$Elements")
+      if (!std::getline(input, line))
       {
-        if (state != State::None)
-        {
-          throw_at_line(lineNo, "Új blokk indult a meglévő befejezése előtt: $Elements");
-        }
-        state = State::Elements;
-        elemsToRead = read_count(in, lineNo, "$Elements");
-        result.tris.clear();
-        result.tris.reserve(elemsToRead);
-        elemsRead = 0;
-        continue;
+        throw_at_line(lineNo + 1, "Hiányzik a $EndElements sor.");
       }
-      if (line == "$EndElements")
+      ++lineNo;
+      trim_inplace(line);
+      if (line != "$EndElements")
       {
-        if (state != State::Elements)
-        {
-          throw_at_line(lineNo, "Váratlan $EndElements.");
-        }
-        if (elemsRead != elemsToRead)
-        {
-          throw_at_line(lineNo, "A $Elements blokk sorainak száma eltér a megadottól.");
-        }
-        state = State::None;
-        continue;
+        throw_at_line(lineNo, "A $Elements blokkot $EndElements sorral kell lezárni.");
       }
 
-      if (state != State::None)
+      if (skipped > 0)
       {
-        throw_at_line(lineNo, "Ismeretlen blokk kezdete egy másik blokk lezárása előtt: " + line);
+        log << "[INFO] " << skipped << " olyan elemet találtam, amit ez a program kihagyott.\n";
       }
+      continue;
+    }
 
+    // --- 4) Egyéb blokkok: csak olvassuk át őket ---
+    if (!line.empty() && line[0] == '$')
+    {
       const std::string sectionName = line.substr(1);
       const std::string endToken = "$End" + sectionName;
       bool foundEnd = false;
-      while (std::getline(in, line))
+
+      while (std::getline(input, line))
       {
         ++lineNo;
         trim_inplace(line);
@@ -216,6 +352,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
           break;
         }
       }
+
       if (!foundEnd)
       {
         throw_at_line(lineNo, "Ismeretlen blokk lezárása hiányzik: " + endToken);
@@ -223,137 +360,16 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       continue;
     }
 
-    switch (state)
-    {
-    case State::PhysicalNames:
-    {
-      if (physRead >= physToRead)
-      {
-        throw_at_line(lineNo, "Túl sok sor a $PhysicalNames blokkban.");
-      }
-      std::istringstream iss(line);
-      int dim = 0;
-      int id = -1;
-      if (!(iss >> dim >> id))
-      {
-        throw_at_line(lineNo, "Érvénytelen sor a $PhysicalNames blokkban: \"" + line + "\"");
-      }
-      if (id < 0)
-      {
-        throw_at_line(lineNo, "Negatív fizikai azonosító: " + std::to_string(id));
-      }
-      std::string name;
-      auto q1 = line.find('"');
-      auto q2 = line.rfind('"');
-      if (q1 != std::string::npos && q2 != std::string::npos && q2 > q1)
-      {
-        name = line.substr(q1 + 1, q2 - q1 - 1);
-      }
-      else
-      {
-        name.clear();
-      }
-      auto inserted = result.physNames.emplace(id, name);
-      if (!inserted.second)
-      {
-        throw_at_line(lineNo, "Duplikált fizikai azonosító: " + std::to_string(id));
-      }
-      ++physRead;
-      break;
-    }
-    case State::Nodes:
-    {
-      if (nodesRead >= nodesToRead)
-      {
-        throw_at_line(lineNo, "Túl sok sor a $Nodes blokkban.");
-      }
-      std::istringstream iss(line);
-      int id = 0;
-      double x = 0.0, y = 0.0, z = 0.0;
-      if (!(iss >> id >> x >> y >> z))
-      {
-        throw_at_line(lineNo, "Érvénytelen csomópont sor: \"" + line + "\"");
-      }
-      if (id <= 0 || static_cast<std::size_t>(id) >= result.nodes.size())
-      {
-        throw_at_line(lineNo, "Csomópont azonosító tartományon kívül: " + std::to_string(id));
-      }
-      if (nodeSeen[static_cast<std::size_t>(id)])
-      {
-        throw_at_line(lineNo, "Duplikált csomópont azonosító: " + std::to_string(id));
-      }
-      nodeSeen[static_cast<std::size_t>(id)] = true;
-      result.nodes[static_cast<std::size_t>(id)].x = x;
-      result.nodes[static_cast<std::size_t>(id)].y = y;
-      result.minx = std::min(result.minx, x);
-      result.miny = std::min(result.miny, y);
-      result.maxx = std::max(result.maxx, x);
-      result.maxy = std::max(result.maxy, y);
-      ++nodesRead;
-      break;
-    }
-    case State::Elements:
-    {
-      if (elemsRead >= elemsToRead)
-      {
-        throw_at_line(lineNo, "Túl sok sor a $Elements blokkban.");
-      }
-      std::istringstream iss(line);
-      int eid = 0;
-      int etype = 0;
-      int ntags = 0;
-      if (!(iss >> eid >> etype >> ntags))
-      {
-        throw_at_line(lineNo, "Érvénytelen elem sor: \"" + line + "\"");
-      }
-      if (ntags < 0)
-      {
-        throw_at_line(lineNo, "Negatív tag szám az elem sorban: " + std::to_string(ntags));
-      }
-      std::vector<int> tags;
-      tags.reserve(static_cast<std::size_t>(ntags));
-      for (int t = 0; t < ntags; ++t)
-      {
-        int tagValue = 0;
-        if (!(iss >> tagValue))
-        {
-          throw_at_line(lineNo, "Nem olvasható ki a(z) " + std::to_string(t + 1) + ". tag értéke.");
-        }
-        tags.push_back(tagValue);
-      }
-
-      if (etype == 2)
-      {
-        int n1 = 0, n2 = 0, n3 = 0;
-        if (!(iss >> n1 >> n2 >> n3))
-        {
-          throw_at_line(lineNo, "Háromszög elemhez hiányoznak a csomópont azonosítók.");
-        }
-        check_node_id_or_throw(n1, result, lineNo);
-        check_node_id_or_throw(n2, result, lineNo);
-        check_node_id_or_throw(n3, result, lineNo);
-        const int phys = (ntags >= 1 ? tags[0] : -1);
-        result.tris.push_back({n1, n2, n3, phys});
-      }
-      ++elemsRead;
-      break;
-    }
-    case State::None:
-      throw_at_line(lineNo, "Adatsor érkezett aktív blokk nélkül.");
-    }
+    // Ha idáig eljutunk, a sor tartalma számunkra érthetetlen.
+    throw_at_line(lineNo, "Nem ismert adat szerepel a fájlban: " + line);
   }
 
-  if (state != State::None)
-  {
-    throw_at_line(lineNo, "A fájl vége előtt nem zárult le a blokk.");
-  }
+  mesh = std::move(fresh);
 
-  mesh = std::move(result);
-
-  if (nodesRead == 0)
-  {
-    log << "[FIGYELEM] 0 csomópontot olvastam.\n";
-  }
+  const std::size_t nodeCount = (mesh.nodes.size() > 0 ? mesh.nodes.size() - 1 : 0);
+  log << "[INFO] Csomópontok száma: " << nodeCount << "\n";
+  log << "[INFO] 1D elemek száma: " << mesh.lines.size() << "\n";
+  log << "[INFO] Háromszögek száma: " << mesh.tris.size() << "\n";
   if (mesh.tris.empty())
   {
     log << "[FIGYELEM] Nem találtam háromszög elemeket (etype=2).\n";

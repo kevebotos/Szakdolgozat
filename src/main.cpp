@@ -1,26 +1,18 @@
 #include "mesh.hpp"
 #include <exception>
 #include <iostream>
-#include <unordered_map>
-#include <unordered_set>
-#include <cmath>
+#include <map>
+#include <set>
 #include <cstring>
 
-static bool is_burner(int phys)
+static std::string lookup_phys_name(const Mesh &mesh, int phys)
 {
-  return phys == 101 || phys == 102 || phys == 103 || phys == 104;
-}
-
-static double compute_eps(const Mesh &m)
-{
-  const double dx = m.maxx - m.minx;
-  const double dy = m.maxy - m.miny;
-  if (!std::isfinite(dx) || !std::isfinite(dy))
+  auto it = mesh.physNames.find(phys);
+  if (it != mesh.physNames.end())
   {
-    return 1e-12;
+    return it->second;
   }
-  const double scale = std::max(dx, dy);
-  return std::max(1e-12, scale * 1e-9); // nagyon kicsi, de a bbox-hoz igazodik
+  return std::string("<nincs név>");
 }
 
 int main(int argc, char **argv)
@@ -55,64 +47,72 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  const std::size_t N = (M.nodes.size() > 0 ? M.nodes.size() - 1 : 0);
+  const std::size_t nodeCount = (M.nodes.size() > 0 ? M.nodes.size() - 1 : 0);
   std::cout << "[OK] Háló beolvasva:\n";
-  std::cout << "  Csomópontok: " << N << "\n";
+  std::cout << "  Csomópontok: " << nodeCount << "\n";
+  std::cout << "  1D elemek: " << M.lines.size() << "\n";
   std::cout << "  Háromszögek: " << M.tris.size() << "\n";
-  std::cout << "  BBox: [" << M.minx << ", " << M.miny << "] — [" << M.maxx << ", " << M.maxy << "]\n";
 
-  // Fizikai csoport névlista
   if (!M.physNames.empty())
   {
-    std::cout << "  Physical names (id → név):\n";
-    for (const auto &kv : M.physNames)
+    std::cout << "  Fizikai csoportok (id → név):\n";
+    for (const auto &entry : M.physNames)
     {
-      std::cout << "    " << kv.first << " → " << kv.second << "\n";
+      std::cout << "    " << entry.first << " → " << entry.second << "\n";
     }
   }
 
-  // Háromszög darabszám fizikai csoportonként
-  std::unordered_map<int, std::size_t> triCount;
-  for (const auto &t : M.tris)
-    triCount[t.phys]++;
-
-  std::cout << "  Háromszögek fizikai csoportonként:\n";
-  for (const auto &kv : triCount)
+  std::map<int, std::size_t> triangleCountPerPhys;
+  for (const auto &tri : M.tris)
   {
-    int id = kv.first;
-    std::size_t cnt = kv.second;
-    auto it = M.physNames.find(id);
-    std::string name = (it != M.physNames.end() ? it->second : std::string("<nincs név>"));
-    std::cout << "    phys=" << id << " (" << name << ") : " << cnt << " db\n";
+    triangleCountPerPhys[tri.phys] += 1;
   }
-
-  // Külső perem csomópontok (téglalap szélein)
-  const double eps = compute_eps(M);
-  std::unordered_set<int> outer;
-  for (int id = 1; id <= static_cast<int>(N); ++id)
+  if (!triangleCountPerPhys.empty())
   {
-    const auto &p = M.nodes[id];
-    if (std::fabs(p.x - M.minx) <= eps || std::fabs(p.x - M.maxx) <= eps ||
-        std::fabs(p.y - M.miny) <= eps || std::fabs(p.y - M.maxy) <= eps)
+    std::cout << "  Háromszög elemek fizikai csoport szerint:\n";
+    for (const auto &entry : triangleCountPerPhys)
     {
-      outer.insert(id);
+      const int physId = entry.first;
+      const std::size_t triCount = entry.second;
+      std::cout << "    phys=" << physId << " (" << lookup_phys_name(M, physId) << ") : " << triCount << " db\n";
     }
   }
-  std::cout << "  Külső perem (geometriai) csomópontok: " << outer.size() << " db\n";
 
-  // Égők (Burner 1..4) csomópontjai — háromszög-fizikai ID alapján
-  std::unordered_set<int> burnerNodes;
-  for (const auto &t : M.tris)
+  std::map<int, std::size_t> lineCountPerPhys;
+  std::map<int, std::set<int>> lineNodesPerPhys;
+  for (const auto &lineElem : M.lines)
   {
-    if (is_burner(t.phys))
+    lineCountPerPhys[lineElem.phys] += 1;
+    lineNodesPerPhys[lineElem.phys].insert(lineElem.a);
+    lineNodesPerPhys[lineElem.phys].insert(lineElem.b);
+  }
+  if (!lineCountPerPhys.empty())
+  {
+    std::cout << "  1D (él) elemek fizikai csoport szerint:\n";
+    for (const auto &entry : lineCountPerPhys)
     {
-      burnerNodes.insert(t.a);
-      burnerNodes.insert(t.b);
-      burnerNodes.insert(t.c);
+      const int physId = entry.first;
+      const std::size_t lineCount = entry.second;
+      const std::size_t nodeCountOnBoundary = lineNodesPerPhys[physId].size();
+      std::cout << "    phys=" << physId << " (" << lookup_phys_name(M, physId) << ") : "
+                << lineCount << " db él, " << nodeCountOnBoundary << " db csomópont\n";
     }
   }
-  std::cout << "  Égőkhöz tartozó (belső) csomópontok (összesen): " << burnerNodes.size() << " db\n";
+  else
+  {
+    std::cout << "  [MEGJEGYZÉS] Nem találtam 1D elemeket, így a peremet később kell definiálni.\n";
+  }
 
-  std::cout << "\n Noice!\n";
+  if (!lineNodesPerPhys.empty())
+  {
+    std::set<int> allBoundaryNodes;
+    for (const auto &entry : lineNodesPerPhys)
+    {
+      allBoundaryNodes.insert(entry.second.begin(), entry.second.end());
+    }
+    std::cout << "  Összesen " << allBoundaryNodes.size() << " db egyedi csomópont kapcsolódik 1D elemekhez.\n";
+  }
+
+  std::cout << "\nKész vagyunk!\n";
   return 0;
 }
