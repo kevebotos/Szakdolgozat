@@ -76,10 +76,10 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
     throw MeshError("Nem tudtam megnyitni a hálófájlt: " + path);
   }
 
-  Mesh fresh;                      // Ide töltjük be a kész hálót
-  std::string line;                // Az aktuálisan olvasott sor
-  std::size_t lineNo = 0;          // Hibaüzenethez: hanyadik sorban járunk
-  std::vector<bool> nodeSeen;      // Segít figyelni, hogy minden csomópont ID egyszer szerepeljen
+  Mesh fresh;                 // Ide töltjük be a kész hálót
+  std::string line;           // Az aktuálisan olvasott sor
+  std::size_t lineNo = 0;     // Hibaüzenethez: hanyadik sorban járunk
+  std::vector<bool> nodeSeen; // Segít figyelni, hogy minden csomópont ID egyszer szerepeljen
 
   while (std::getline(input, line))
   {
@@ -90,7 +90,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
       continue; // Üres sor: lépjünk tovább
     }
 
-    // --- 1) Physical nevek ---
+    // --- 1) PhysicalNames ---
     if (line == "$PhysicalNames")
     {
       const std::size_t physCount = read_count(input, lineNo, "$PhysicalNames");

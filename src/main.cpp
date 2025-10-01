@@ -1,4 +1,5 @@
 #include "mesh.hpp"
+#include "xs.hpp"
 #include <exception>
 #include <iostream>
 #include <map>
@@ -15,14 +16,30 @@ static std::string lookup_phys_name(const Mesh &mesh, int phys)
   return std::string("<nincs név>");
 }
 
+static void print_group_values(const std::string &label, const std::vector<double> &values)
+{
+  std::cout << "    " << label << ":";
+  for (std::size_t i = 0; i < values.size(); ++i)
+  {
+    std::cout << " " << values[i];
+  }
+  std::cout << "\n";
+}
+
 int main(int argc, char **argv)
 {
-  std::string meshPath = "stove.msh"; // alapértelmezett a projekt gyökerében
+  std::string meshPath = "stove.msh";
+  std::string xsPath = "xs_vver440.txt";
+
   for (int i = 1; i < argc; ++i)
   {
     if ((std::strcmp(argv[i], "--mesh") == 0 || std::strcmp(argv[i], "-m") == 0) && i + 1 < argc)
     {
       meshPath = argv[++i];
+    }
+    else if ((std::strcmp(argv[i], "--xs") == 0 || std::strcmp(argv[i], "-x") == 0) && i + 1 < argc)
+    {
+      xsPath = argv[++i];
     }
   }
 
@@ -113,6 +130,66 @@ int main(int argc, char **argv)
     std::cout << "  Összesen " << allBoundaryNodes.size() << " db egyedi csomópont kapcsolódik 1D elemekhez.\n";
   }
 
+  XsLibrary xsLibrary;
+  try
+  {
+    load_xs(xsPath, xsLibrary);
+    std::cout << "\n[OK] Keresztmetszet könyvtár beolvasva: " << xsLibrary.title << "\n";
+    std::cout << "  Energia csoportok száma: " << xsLibrary.energyGroupCount << "\n";
+    if (!xsLibrary.energyGroupNames.empty())
+    {
+      std::cout << "  Csoportnevek:";
+      for (std::size_t i = 0; i < xsLibrary.energyGroupNames.size(); ++i)
+      {
+        std::cout << " " << xsLibrary.energyGroupNames[i];
+      }
+      std::cout << "\n";
+    }
+    if (!xsLibrary.materialOrder.empty())
+    {
+      std::cout << "  Anyagok (sorrend):";
+      for (std::size_t i = 0; i < xsLibrary.materialOrder.size(); ++i)
+      {
+        std::cout << " " << xsLibrary.materialOrder[i];
+      }
+      std::cout << "\n";
+    }
+    for (std::size_t index = 0; index < xsLibrary.materials.size(); ++index)
+    {
+      const XsMaterial &mat = xsLibrary.materials[index];
+      std::cout << "    [" << mat.name << "]\n";
+      print_group_values("sigma_t", mat.sigma_t);
+      print_group_values("sigma_a", mat.sigma_a);
+      print_group_values("nu_sigma_f", mat.nu_sigma_f);
+      print_group_values("chi", mat.chi);
+      std::cout << "    scatter mátrix:" << "\n";
+      for (std::size_t row = 0; row < mat.scatter.size(); ++row)
+      {
+        std::cout << "      ";
+        for (std::size_t col = 0; col < mat.scatter[row].size(); ++col)
+        {
+          std::cout << mat.scatter[row][col];
+          if (col + 1 < mat.scatter[row].size())
+          {
+            std::cout << " ";
+          }
+        }
+        std::cout << "\n";
+      }
+    }
+  }
+  catch (const XsParseError &ex)
+  {
+    std::cerr << "Keresztmetszet beolvasási hiba (sor " << ex.line() << "): " << ex.what() << "\n";
+    return 1;
+  }
+  catch (const XsError &ex)
+  {
+    std::cerr << "Keresztmetszet beolvasási hiba: " << ex.what() << "\n";
+    return 1;
+  }
+
   std::cout << "\nKész vagyunk!\n";
   return 0;
 }
+

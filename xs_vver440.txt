@@ -1,40 +1,46 @@
-# Simplified two-group cross sections for a VVER-440 like assembly
-title = "VVER-440 two-group cross sections"
+# Two-group macroscopic cross sections for a VVER-440-like assembly
+title = "VVER-440 two-group library"
 no_energy = 2
-
+energy_groups = ["G1-fast", "G2-thermal"]
+materials = ["Fuel", "Cladding", "Moderator", "Reflector"]
 
 [Material "Fuel"]
-sigma_t 0.90 0.50
-sigma_a 0.08
-nu_sigma_f 0.45
-chi 1.0
-scatter 0.80, 0.02
-        1.32, 0.90
+sigma_t = 1.46 0.79
+sigma_a = 0.01 0.09
+nu_sigma_f = 0.025 0.175
+chi = 0.97 0.03
+scatter = [
+  0.80 0.65
+  0.02 0.68
+]
 
+[Material "Cladding"]
+sigma_t = 0.98 0.24
+sigma_a = 0.004 0.008
+nu_sigma_f = 0.0 0.0
+chi = 0.0 0.0
+scatter = [
+  0.60 0.376
+  0.012 0.220
+]
 
-[Material Cladding]
-sigma_t = 0.32
-sigma_a = 0.01
-nu_sigma_f = 0.0
-chi = 0.0
-scatter = 0.30, 0.00
+[Material "Moderator"]
+sigma_t = 0.200 0.6688
+sigma_a = 0.0005 0.0018
+nu_sigma_f = 0.0 0.0
+chi = 0.0 0.0
+scatter = [
+  0.1805 0.0190
+  0.0350 0.6320
+]
 
-
-
-[Material Moderator]
-sigma_t = 0.45
-sigma_a = 0.0005
-nu_sigma_f = 0.0
-chi = 0.0
-scatter = 0.44, 0.005
-
-
-
-[Material Reflector]
-sigma_t = 0.70
-sigma_a = 0.02
-nu_sigma_f = 0.0
-chi = 0.0
-scatter = 0.65, 0.03
-
+[Material "Reflector"]
+sigma_t = 0.49 0.39
+sigma_a = 0.01 0.02
+nu_sigma_f = 0.0 0.0
+chi = 0.0 0.0
+scatter = [
+  0.35 0.13
+  0.04 0.33
+]
 
