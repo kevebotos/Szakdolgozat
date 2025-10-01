@@ -8,7 +8,7 @@ cmake --build build --parallel
 ## Run
 
 ```bash
-./build/stove_heat --mesh vver440.msh --xs xs_vver440.txt
+./build/szakdolgozat --mesh vver440.msh --xs xs_vver440.txt
 ```
 
 - `--mesh` : Gmsh MSH v2 ASCII hálófájl
