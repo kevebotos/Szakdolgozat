@@ -46,4 +46,3 @@ private:
 };
 
 void load_xs(const std::string &path, XsLibrary &library);
-

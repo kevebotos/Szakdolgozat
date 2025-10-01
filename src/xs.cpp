@@ -18,7 +18,7 @@ namespace
     }
   }
 
-  std::string strip_comment(const std::string &line)
+  std::string strip_comment(const std::string &line) // kommentek törlése a fileból
   {
     std::string result = line;
     const std::size_t hashPos = result.find('#');
@@ -124,7 +124,7 @@ namespace
     }
   }
 
-  void finalise_material(const XsMaterial &material, int groupCount, std::size_t lineNo)
+  void finalise_material(const XsMaterial &material, int groupCount, std::size_t lineNo) // anyag végén --> van név? minden mező csoportszáma stimmel?
   {
     if (material.name.empty())
     {
@@ -138,7 +138,7 @@ namespace
   }
 }
 
-const XsMaterial *XsLibrary::find_material(const std::string &name) const
+const XsMaterial *XsLibrary::find_material(const std::string &name) const // adott nevű anyag keresésére
 {
   for (std::size_t i = 0; i < materials.size(); ++i)
   {
@@ -367,4 +367,3 @@ void load_xs(const std::string &path, XsLibrary &library)
 
   library = fresh;
 }
-
