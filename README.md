@@ -8,12 +8,20 @@ cmake --build build --parallel
 ## Run
 
 ```bash
-./build/stove_heat --mesh vver440.msh
+./build/stove_heat --mesh vver440.msh --xs xs_vver440.txt
 ```
+
+- `--mesh` : Gmsh MSH v2 ASCII hálófájl
+- `--xs` : Többcsoportos keresztmetszet könyvtár (lásd `xs_vver440.txt`)
+
+Sikeres futáskor előbb összegzi a háló adatait, majd beolvassa a keresztmetszet
+könyvtárat (anyagok, energiacsoportok) és végül listázza, hogy a mesh fizikai
+csoportjaihoz mely anyagok lettek hozzárendelve.
 
 ## Project Structure
 
 - `CMakeLists.txt` - CMake build configuration
-- `src/` - Source code (`main.cpp`, `mesh.cpp`, `mesh.hpp`)
+- `src/` - Source code (`main.cpp`, `mesh.cpp`, `mesh.hpp`, `xs.cpp`, `xs.hpp`)
 - `stove.msh` - Mesh input file
+- `xs_vver440.txt` - Példaként szolgáló, két energiacsoportos keresztmetszet könyvtár
 - `build/` - (Ignored) Out-of-source build directory
