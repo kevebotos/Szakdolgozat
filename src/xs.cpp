@@ -1,5 +1,6 @@
 #include "xs.hpp"
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <cctype>
@@ -138,13 +139,13 @@ namespace
   }
 }
 
-const XsMaterial *XsLibrary::find_material(const std::string &name) const // adott nevű anyag keresésére
+const XsMaterial::SPtr XsLibrary::find_material(const std::string &name) const // adott nevű anyag keresésére
 {
   for (std::size_t i = 0; i < materials.size(); ++i)
   {
     if (materials[i].name == name)
     {
-      return &materials[i];
+      return std::make_shared<XsMaterial>(materials[i]);
     }
   }
   return nullptr;

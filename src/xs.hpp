@@ -1,4 +1,6 @@
-#pragma once
+#ifndef XS_HPP
+#define XS_HPP
+
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -6,6 +8,10 @@
 
 struct XsMaterial
 {
+  typedef std::shared_ptr<XsMaterial> SPtr;
+  typedef std::unique_ptr<XsMaterial> UPtr;
+  typedef std::weak_ptr<XsMaterial> WPtr;
+
   std::string name;
   std::vector<double> sigma_t;
   std::vector<double> sigma_a;
@@ -22,7 +28,7 @@ struct XsLibrary
   std::vector<std::string> materialOrder;
   std::vector<XsMaterial> materials;
 
-  const XsMaterial *find_material(const std::string &name) const;
+  const XsMaterial::SPtr find_material(const std::string &name) const;
 };
 
 class XsError : public std::runtime_error
@@ -46,3 +52,5 @@ private:
 };
 
 void load_xs(const std::string &path, XsLibrary &library);
+
+#endif // XS_HPP
