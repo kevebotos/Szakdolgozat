@@ -26,9 +26,9 @@ static void print_group_values(const std::string &label, const std::vector<doubl
   std::cout << "\n";
 }
 
-static std::map<int, const XsMaterial *> build_phys_xs_map(const Mesh &mesh, const XsLibrary &library)
+static std::map<int, XsMaterial::SPtr> build_phys_xs_map(const Mesh &mesh, const XsLibrary &library)
 {
-  std::map<int, const XsMaterial *> mapping;
+  std::map<int, XsMaterial::SPtr> mapping;
   for (std::map<int, std::string>::const_iterator it = mesh.physNames.begin(); it != mesh.physNames.end(); ++it)
   {
     const int physId = it->first;
@@ -38,7 +38,7 @@ static std::map<int, const XsMaterial *> build_phys_xs_map(const Mesh &mesh, con
       std::cerr << "[FIGYELMEZTETÉS] Fizikai csoport név nélkül (id=" << physId << "), kihagyom.\n";
       continue;
     }
-    const XsMaterial *material = library.find_material(physName);
+    XsMaterial::SPtr material = library.find_material(physName);
     if (material == nullptr)
     {
       std::cerr << "[FIGYELMEZTETÉS] Nincs keresztmetszet adat a(z) " << physName << " csoporthoz.\n";
@@ -200,14 +200,25 @@ int main(int argc, char **argv)
         std::cout << "\n";
       }
     }
-    std::map<int, const XsMaterial *> physToXs = build_phys_xs_map(M, xsLibrary);
+    if (!xsLibrary.boundaries.empty())
+    {
+      std::cout << "\n  Peremfeltételek:\n";
+      for (std::size_t i = 0; i < xsLibrary.boundaries.size(); ++i)
+      {
+        const XsBoundary &bound = xsLibrary.boundaries[i];
+        std::cout << "    [" << bound.name << "]\n";
+        std::cout << "      type: " << bound.type << "\n";
+        std::cout << "      value: " << bound.value << "\n";
+      }
+    }
+    std::map<int, XsMaterial::SPtr> physToXs = build_phys_xs_map(M, xsLibrary);
     if (!physToXs.empty())
     {
       std::cout << "\n[OK] Fizikai csoport → anyag hozzárendelés:\n";
-      for (std::map<int, const XsMaterial *>::const_iterator it = physToXs.begin(); it != physToXs.end(); ++it)
+      for (std::map<int, XsMaterial::SPtr>::const_iterator it = physToXs.begin(); it != physToXs.end(); ++it)
       {
         const int physId = it->first;
-        const XsMaterial *material = it->second;
+        const XsMaterial::SPtr &material = it->second;
         std::cout << "  phys=" << physId << " → " << material->name << "\n";
       }
     }

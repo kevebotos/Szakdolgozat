@@ -20,6 +20,13 @@ struct XsMaterial
   std::vector<std::vector<double>> scatter;
 };
 
+struct XsBoundary
+{
+  std::string name;
+  std::string type;
+  double value = 0.0;
+};
+
 struct XsLibrary
 {
   std::string title;
@@ -27,6 +34,7 @@ struct XsLibrary
   std::vector<std::string> energyGroupNames;
   std::vector<std::string> materialOrder;
   std::vector<XsMaterial> materials;
+  std::vector<XsBoundary> boundaries;
 
   const XsMaterial::SPtr find_material(const std::string &name) const;
 };

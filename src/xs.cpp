@@ -163,7 +163,9 @@ void load_xs(const std::string &path, XsLibrary &library)
   std::string line;
   std::size_t lineNo = 0;
   bool insideMaterial = false;
+  bool insideBoundary = false;
   XsMaterial currentMaterial;
+  XsBoundary currentBoundary;
 
   while (std::getline(input, line))
   {
@@ -189,6 +191,11 @@ void load_xs(const std::string &path, XsLibrary &library)
           fresh.materials.push_back(currentMaterial);
           currentMaterial = XsMaterial();
         }
+        if (insideBoundary)
+        {
+          fresh.boundaries.push_back(currentBoundary);
+          currentBoundary = XsBoundary();
+        }
         const std::size_t firstQuote = cleaned.find('"');
         const std::size_t lastQuote = cleaned.rfind('"');
         if (firstQuote == std::string::npos || lastQuote == firstQuote)
@@ -210,6 +217,44 @@ void load_xs(const std::string &path, XsLibrary &library)
         currentMaterial = XsMaterial();
         currentMaterial.name = materialName;
         insideMaterial = true;
+        insideBoundary = false;
+        continue;
+      }
+      else if (cleaned.compare(0, 10, "[Boundary ") == 0)
+      {
+        if (insideMaterial)
+        {
+          finalise_material(currentMaterial, fresh.energyGroupCount, lineNo);
+          fresh.materials.push_back(currentMaterial);
+          currentMaterial = XsMaterial();
+        }
+        if (insideBoundary)
+        {
+          fresh.boundaries.push_back(currentBoundary);
+          currentBoundary = XsBoundary();
+        }
+        const std::size_t firstQuote = cleaned.find('"');
+        const std::size_t lastQuote = cleaned.rfind('"');
+        if (firstQuote == std::string::npos || lastQuote == firstQuote)
+        {
+          throw_at_line(lineNo, "A boundary fejlécben idézőjelek közé kell tenni a nevet.");
+        }
+        std::string boundaryName = cleaned.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+        if (boundaryName.empty())
+        {
+          throw_at_line(lineNo, "A boundary név nem lehet üres.");
+        }
+        for (std::size_t i = 0; i < fresh.boundaries.size(); ++i)
+        {
+          if (fresh.boundaries[i].name == boundaryName)
+          {
+            throw_at_line(lineNo, "A(z) " + boundaryName + " boundary már szerepel a fájlban.");
+          }
+        }
+        currentBoundary = XsBoundary();
+        currentBoundary.name = boundaryName;
+        insideBoundary = true;
+        insideMaterial = false;
         continue;
       }
       else
@@ -233,7 +278,7 @@ void load_xs(const std::string &path, XsLibrary &library)
       throw_at_line(lineNo, "A kulcs vagy az érték üres.");
     }
 
-    if (!insideMaterial)
+    if (!insideMaterial && !insideBoundary)
     {
       if (key == "title")
       {
@@ -267,6 +312,36 @@ void load_xs(const std::string &path, XsLibrary &library)
       else
       {
         throw_at_line(lineNo, "Ismeretlen globális kulcs: " + key);
+      }
+      continue;
+    }
+
+    if (insideBoundary)
+    {
+      if (key == "type")
+      {
+        if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
+        {
+          currentBoundary.type = value.substr(1, value.size() - 2);
+        }
+        else
+        {
+          currentBoundary.type = value;
+        }
+      }
+      else if (key == "value")
+      {
+        std::istringstream iss(value);
+        double val = 0.0;
+        if (!(iss >> val))
+        {
+          throw_at_line(lineNo, "A value mezőnek számnak kell lennie.");
+        }
+        currentBoundary.value = val;
+      }
+      else
+      {
+        throw_at_line(lineNo, "Ismeretlen kulcs a boundary blokkjában: " + key);
       }
       continue;
     }
@@ -342,6 +417,11 @@ void load_xs(const std::string &path, XsLibrary &library)
   {
     finalise_material(currentMaterial, fresh.energyGroupCount, lineNo == 0 ? 1 : lineNo);
     fresh.materials.push_back(currentMaterial);
+  }
+
+  if (insideBoundary)
+  {
+    fresh.boundaries.push_back(currentBoundary);
   }
 
   if (fresh.energyGroupCount <= 0)

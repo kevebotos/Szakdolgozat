@@ -44,42 +44,18 @@ scatter = [
   0.04 0.33
 ]
 
-# [Material "Fuel-Clad"]
-# sigma_t = 1.22 0.515
-# sigma_a = 0.007 0.049
-# nu_sigma_f = 0.0125 0.0875
-# chi = 0.97 0.03
-# scatter = [
-#   0.70 0.513
-#   0.016 0.450
-# ]
+[Boundary "Fuel-Clad"]
+type = "interface"
+value = 0.0
 
-# [Material "Clad-Moderator"]
-# sigma_t = 0.59 0.4544
-# sigma_a = 0.00225 0.0049
-# nu_sigma_f = 0.0 0.0
-# chi = 0.0 0.0
-# scatter = [
-#   0.39025 0.19750
-#   0.02350 0.42600
-# ]
+[Boundary "Clad-Moderator"]
+type = "interface"
+value = 0.0
 
-# [Material "Moderator-Reflector"]
-# sigma_t = 0.345 0.5294
-# sigma_a = 0.00525 0.0109
-# nu_sigma_f = 0.0 0.0
-# chi = 0.0 0.0
-# scatter = [
-#   0.26525 0.07450
-#   0.03750 0.48100
-# ]
+[Boundary "Moderator-Reflector"]
+type = "interface"
+value = 0.0
 
-# [Material "Outer-Boundary"]
-# sigma_t = 0.0 0.0
-# sigma_a = 0.0 0.0
-# nu_sigma_f = 0.0 0.0
-# chi = 0.0 0.0
-# scatter = [
-#   0.0 0.0
-#   0.0 0.0
-# ]
+[Boundary "Outer-Boundary"]
+type = "vacuum"
+value = 0.0
