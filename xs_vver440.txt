@@ -2,8 +2,60 @@
 title = "VVER-440 two-group library"
 no_energy = 2
 energy_groups = ["G1-fast", "G2-thermal"]
-materials = ["Fuel", "Cladding", "Moderator", "Reflector"]
+materials = ["H", "O", "U235", "U238", "Zr", "Fuel", "Cladding", "Moderator", "Reflector"]
 
+# Elemi anyagok (alapkomponensek keverékekhez)
+[Material "H"]
+sigma_t = 20.0 30.0
+sigma_a = 0.0003 0.002
+nu_sigma_f = 0.0 0.0
+chi = 0.0 0.0
+scatter = [
+  19.8 0.18
+  0.05 29.8
+]
+
+[Material "O"]
+sigma_t = 3.5 3.8
+sigma_a = 0.0002 0.0001
+nu_sigma_f = 0.0 0.0
+chi = 0.0 0.0
+scatter = [
+  3.4 0.08
+  0.02 3.75
+]
+
+[Material "U235"]
+sigma_t = 8.0 15.0
+sigma_a = 0.08 1.2
+nu_sigma_f = 0.2 2.5
+chi = 0.97 0.03
+scatter = [
+  7.5 0.4
+  0.1 11.3
+]
+
+[Material "U238"]
+sigma_t = 8.5 11.0
+sigma_a = 0.02 0.08
+nu_sigma_f = 0.01 0.0
+chi = 0.97 0.03
+scatter = [
+  8.3 0.15
+  0.05 10.87
+]
+
+[Material "Zr"]
+sigma_t = 5.0 6.0
+sigma_a = 0.002 0.005
+nu_sigma_f = 0.0 0.0
+chi = 0.0 0.0
+scatter = [
+  4.8 0.18
+  0.02 5.78
+]
+
+# Kompozit anyagok (teljes assemblyk)
 [Material "Fuel"]
 sigma_t = 1.46 0.79
 sigma_a = 0.01 0.09

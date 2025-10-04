@@ -1,0 +1,45 @@
+# VVER-440 Model File (Gmsh-style format)
+
+$ModelInfo
+VVER-440 reactor model
+$EndModelInfo
+
+# Zones - 2D (térfogati) elemek
+# Formátum: név "physGroup1" ["physGroup2" ...] "leírás"
+$Zones
+5
+FuelRegion "Fuel" "Active fuel assembly region"
+CladdingRegion "Cladding" "Fuel cladding region"
+FuelCladRegion "Fuel" "Cladding" "Combined fuel and cladding region"
+ModeratorRegion "Moderator" "Water moderator region"
+ReflectorRegion "Reflector" "Reflector region around the core"
+$EndZones
+
+# Boundaries - 1D (felületi/él) elemek
+# Formátum: név "physGroup1" ["physGroup2" ...] "leírás"
+$Boundaries
+4
+FuelCladInterface "Fuel-Clad" "Interface between fuel and cladding"
+CladModeratorInterface "Clad-Moderator" "Interface between cladding and moderator"
+ModeratorReflectorInterface "Moderator-Reflector" "Interface between moderator and reflector"
+OuterBoundary "Outer-Boundary" "Vacuum boundary at the outer edge"
+$EndBoundaries
+
+# Mixtures - Anyagkeverékek elemi komponensekből
+# Formátum: név sűrűség "leírás" komponensszám elem1 atom1 elem2 atom2 ...
+$Mixtures
+3
+Water 1.0 "Light water moderator (H2O)" 2 H 2.0 O 1.0
+UO2 10.97 "Uranium dioxide fuel (3.5% enriched)" 3 U235 0.07 U238 1.93 O 2.0
+Zircaloy 6.5 "Zirconium alloy cladding" 1 Zr 1.0
+$EndMixtures
+
+# Materials - Zóna-anyag hozzárendelések
+# Formátum: ZoneName MixtureName
+$Materials
+4
+FuelRegion UO2
+CladdingRegion Zircaloy
+ModeratorRegion Water
+ReflectorRegion Water
+$EndMaterials

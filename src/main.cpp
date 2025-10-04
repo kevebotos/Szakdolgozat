@@ -1,5 +1,6 @@
 #include "mesh.hpp"
 #include "xs.hpp"
+#include "model.hpp"
 #include <exception>
 #include <iostream>
 #include <map>
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
 {
   std::string meshPath = "stove.msh";
   std::string xsPath = "xs_vver440.txt";
+  std::string modelPath = "model.txt";
 
   for (int i = 1; i < argc; ++i)
   {
@@ -63,6 +65,10 @@ int main(int argc, char **argv)
     else if ((std::strcmp(argv[i], "--xs") == 0 || std::strcmp(argv[i], "-x") == 0) && i + 1 < argc)
     {
       xsPath = argv[++i];
+    }
+    else if ((std::strcmp(argv[i], "--model") == 0 || std::strcmp(argv[i], "-d") == 0) && i + 1 < argc)
+    {
+      modelPath = argv[++i];
     }
   }
 
@@ -231,6 +237,72 @@ int main(int argc, char **argv)
   catch (const XsError &ex)
   {
     std::cerr << "Keresztmetszet beolvasási hiba: " << ex.what() << "\n";
+    return 1;
+  }
+
+  ModelLibrary modelLibrary;
+  try
+  {
+    loadModel(modelPath, modelLibrary);
+    std::cout << "\n[OK] Model fájl beolvasva: " << modelLibrary.title << "\n";
+    std::cout << "  Zónák száma: " << modelLibrary.zones.size() << "\n";
+    for (std::size_t i = 0; i < modelLibrary.zones.size(); ++i)
+    {
+      const Zone &zone = modelLibrary.zones[i];
+      std::cout << "    [Zone: " << zone.name << "]\n";
+      if (!zone.description.empty())
+      {
+        std::cout << "      description: " << zone.description << "\n";
+      }
+      std::cout << "      physical_groups (2D):";
+      for (std::size_t j = 0; j < zone.physicalGroups.size(); ++j)
+      {
+        std::cout << " " << zone.physicalGroups[j];
+      }
+      std::cout << "\n";
+    }
+    std::cout << "\n  Peremek száma: " << modelLibrary.boundaries.size() << "\n";
+    for (std::size_t i = 0; i < modelLibrary.boundaries.size(); ++i)
+    {
+      const Boundary &boundary = modelLibrary.boundaries[i];
+      std::cout << "    [Boundary: " << boundary.name << "]\n";
+      if (!boundary.description.empty())
+      {
+        std::cout << "      description: " << boundary.description << "\n";
+      }
+      std::cout << "      physical_groups (1D):";
+      for (std::size_t j = 0; j < boundary.physicalGroups.size(); ++j)
+      {
+        std::cout << " " << boundary.physicalGroups[j];
+      }
+      std::cout << "\n";
+    }
+    std::cout << "\n  Keverékek száma: " << modelLibrary.mixtures.size() << "\n";
+    for (std::size_t i = 0; i < modelLibrary.mixtures.size(); ++i)
+    {
+      const Mixture &mixture = modelLibrary.mixtures[i];
+      std::cout << "    [Mixture: " << mixture.name << "]\n";
+      if (!mixture.description.empty())
+      {
+        std::cout << "      description: " << mixture.description << "\n";
+      }
+      std::cout << "      density: " << mixture.density << " g/cm³\n";
+      std::cout << "      components:\n";
+      for (std::size_t j = 0; j < mixture.components.size(); ++j)
+      {
+        const MixtureComponent &comp = mixture.components[j];
+        std::cout << "        " << comp.element << " = " << comp.atoms << "\n";
+      }
+    }
+  }
+  catch (const ModelParseError &ex)
+  {
+    std::cerr << "Model beolvasási hiba (sor " << ex.line() << "): " << ex.what() << "\n";
+    return 1;
+  }
+  catch (const ModelError &ex)
+  {
+    std::cerr << "Model beolvasási hiba: " << ex.what() << "\n";
     return 1;
   }
 
