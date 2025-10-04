@@ -221,6 +221,36 @@ int main(int argc, char **argv)
     std::cout << "  Összesen " << allBoundaryNodes.size() << " db egyedi csomópont kapcsolódik 1D elemekhez.\n";
   }
 
+  // VALIDÁCIÓ 1: Fizikai csoport ellenőrzés háromszögekre
+  if (control.meshOutput.getFlag("validate_physical_groups"))
+  {
+    int orphanCount = 0;
+    std::set<int> orphanPhysIds;
+    for (const auto &tri : M.tris)
+    {
+      if (M.physNames.find(tri.phys) == M.physNames.end())
+      {
+        orphanCount++;
+        orphanPhysIds.insert(tri.phys);
+      }
+    }
+    if (orphanCount > 0)
+    {
+      std::cout << "\n[VALIDÁCIÓS HIBA] " << orphanCount
+                << " háromszög nincs definiált fizikai csoportban!\n";
+      std::cout << "  Ismeretlen fizikai csoport ID-k:";
+      for (int physId : orphanPhysIds)
+      {
+        std::cout << " " << physId;
+      }
+      std::cout << "\n";
+    }
+    else
+    {
+      std::cout << "\n[VALIDÁCIÓ OK] Minden háromszög fizikai csoportban van.\n";
+    }
+  }
+
   // Verbosity >= 4: Debug információk
   if (meshVerbosity >= 4)
   {
@@ -350,6 +380,51 @@ int main(int argc, char **argv)
         const int physId = it->first;
         const XsMaterial::SPtr &material = it->second;
         std::cout << "  phys=" << physId << " → " << material->name << "\n";
+      }
+    }
+
+    // VALIDÁCIÓ 2: Anyag hozzárendelés ellenőrzés
+    if (control.meshOutput.getFlag("validate_material_assignment"))
+    {
+      int missingCount = 0;
+      std::vector<std::string> missingPhysGroups;
+
+      for (const auto &entry : M.physNames)
+      {
+        int physId = entry.first;
+        const std::string &physName = entry.second;
+
+        // Csak 2D fizikai csoportokat ellenőrizzük (háromszögek)
+        bool hasTriangles = false;
+        for (const auto &tri : M.tris)
+        {
+          if (tri.phys == physId)
+          {
+            hasTriangles = true;
+            break;
+          }
+        }
+
+        if (hasTriangles && physToXs.find(physId) == physToXs.end())
+        {
+          missingCount++;
+          missingPhysGroups.push_back(physName + " (id=" + std::to_string(physId) + ")");
+        }
+      }
+
+      if (missingCount > 0)
+      {
+        std::cout << "\n[VALIDÁCIÓS HIBA] " << missingCount
+                  << " fizikai csoportnak nincs anyag hozzárendelve!\n";
+        std::cout << "  Hiányzó anyagok:\n";
+        for (const auto &name : missingPhysGroups)
+        {
+          std::cout << "    - " << name << "\n";
+        }
+      }
+      else
+      {
+        std::cout << "\n[VALIDÁCIÓ OK] Minden 2D fizikai csoportnak van anyaga.\n";
       }
     }
 
@@ -496,6 +571,68 @@ int main(int argc, char **argv)
       {
         const Material &mat = modelLibrary.materials[i];
         std::cout << "    " << mat.zoneName << " → " << mat.mixtureName << "\n";
+      }
+    }
+
+    // VALIDÁCIÓ 3: Perem ellenőrzés
+    if (control.modelOutput.getFlag("validate_boundaries"))
+    {
+      int missingCount = 0;
+      std::vector<std::string> missingBoundaries;
+
+      for (const auto &boundary : modelLibrary.boundaries)
+      {
+        bool found = false;
+
+        // Ellenőrizzük, hogy a boundary minden fizikai csoportja létezik-e a mesh-ben
+        for (const auto &physGroupName : boundary.physicalGroups)
+        {
+          // Keressük meg a fizikai csoport nevét a mesh-ben
+          for (const auto &meshPhys : M.physNames)
+          {
+            if (meshPhys.second == physGroupName)
+            {
+              // Ellenőrizzük, hogy van-e 1D elem ezzel a fizikai ID-vel
+              for (const auto &line : M.lines)
+              {
+                if (line.phys == meshPhys.first)
+                {
+                  found = true;
+                  break;
+                }
+              }
+              if (found) break;
+            }
+          }
+          if (found) break;
+        }
+
+        if (!found)
+        {
+          missingCount++;
+          std::string groupsList;
+          for (std::size_t i = 0; i < boundary.physicalGroups.size(); ++i)
+          {
+            if (i > 0) groupsList += ", ";
+            groupsList += boundary.physicalGroups[i];
+          }
+          missingBoundaries.push_back(boundary.name + " (csoportok: " + groupsList + ")");
+        }
+      }
+
+      if (missingCount > 0)
+      {
+        std::cout << "\n[VALIDÁCIÓS HIBA] " << missingCount
+                  << " definiált perem nem található a mesh-ben!\n";
+        std::cout << "  Hiányzó peremek:\n";
+        for (const auto &name : missingBoundaries)
+        {
+          std::cout << "    - " << name << "\n";
+        }
+      }
+      else
+      {
+        std::cout << "\n[VALIDÁCIÓ OK] Minden definiált perem megtalálható a mesh-ben.\n";
       }
     }
 

@@ -18,6 +18,10 @@ verbosity 2
 physical_groups off      # Fizikai csoportok kiírása (id → név)
 elements_per_group off   # Hány háromszög van melyik fizikai csoportban
 boundary_nodes off       # 1D elemekhez kapcsolódó csomópontok (verbose)
+
+# Validációs flag-ek
+validate_physical_groups on   # Ellenőrzi, hogy minden háromszög fizikai csoportban van-e
+validate_material_assignment on # Ellenőrzi, hogy minden fizikai csoportnak van-e anyaga
 $EndMeshOutput
 
 # ========== XS (KERESZTMETSZET) PARSER KONTROLL ==========
@@ -44,12 +48,15 @@ boundaries off           # Peremek listája
 mixtures off             # Keverékek listája
 materials off            # Zóna-anyag hozzárendelések
 mixture_details off      # Keverékek komponensei részletesen
+
+# Validációs flag-ek
+validate_boundaries on   # Ellenőrzi, hogy minden definiált perem létezik-e a mesh-ben
 $EndModelOutput
 
 # ========== GLOBÁLIS BEÁLLÍTÁSOK ==========
 $GlobalOutput
 # Ha be van állítva (>=0), akkor felülírja az összes parser verbosity-ját
-master_verbosity 4
+master_verbosity 5
 
 # Kimenet formátuma (jelenleg csak 'plain' támogatott)
 format plain
