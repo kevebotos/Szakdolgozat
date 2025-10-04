@@ -1,0 +1,56 @@
+# VVER-440 Control File
+# Ez a fájl szabályozza a program kimenetét
+#
+# Verbosity szintek:
+#   0 = Semmi kimenet (csendes)
+#   1 = Alapvető összefoglaló (csomópontok, elemek száma, stb.)
+#   2 = Részletes (fizikai csoportok, anyagok listája, stb.)
+#   3 = Debug (minden részlet, scatter mátrix, komponensek)
+#   4 = Minden adat + debug info (parsing idő, fájl méret, memória)
+#   5 = CSAK debug info (nincs adat kimenet)
+
+# ========== MESH PARSER KONTROLL ==========
+$MeshOutput
+# Alap verbosity szint a mesh parsinghez
+verbosity 2
+
+# Egyedi flag-ek (finomhangolás - csak ha verbosity >= 1)
+physical_groups off      # Fizikai csoportok kiírása (id → név)
+elements_per_group off   # Hány háromszög van melyik fizikai csoportban
+boundary_nodes off       # 1D elemekhez kapcsolódó csomópontok (verbose)
+$EndMeshOutput
+
+# ========== XS (KERESZTMETSZET) PARSER KONTROLL ==========
+$XsOutput
+# Alap verbosity szint az XS parsinghez
+verbosity 1
+
+# Egyedi flag-ek (finomhangolás - csak ha verbosity >= 1)
+energy_groups off        # Energia csoport nevek kiírása
+materials off            # Anyag nevek kiírása
+cross_sections off       # Keresztmetszet értékek részletesen (sigma_t, sigma_a, stb.)
+scatter_matrix off       # Scatter mátrix kiírása (nagyon verbose)
+boundaries off           # Peremfeltételek kiírása
+$EndXsOutput
+
+# ========== MODEL PARSER KONTROLL ==========
+$ModelOutput
+# Alap verbosity szint a model parsinghez
+verbosity 5
+
+# Egyedi flag-ek (finomhangolás - csak ha verbosity >= 1)
+zones off                # Zónák listája
+boundaries off           # Peremek listája
+mixtures off             # Keverékek listája
+materials off            # Zóna-anyag hozzárendelések
+mixture_details off      # Keverékek komponensei részletesen
+$EndModelOutput
+
+# ========== GLOBÁLIS BEÁLLÍTÁSOK ==========
+$GlobalOutput
+# Ha be van állítva (>=0), akkor felülírja az összes parser verbosity-ját
+master_verbosity 4
+
+# Kimenet formátuma (jelenleg csak 'plain' támogatott)
+format plain
+$EndGlobalOutput

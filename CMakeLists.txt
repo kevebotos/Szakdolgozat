@@ -9,6 +9,7 @@ add_executable(szakdolgozat
     src/mesh.cpp
     src/xs.cpp
     src/model.cpp
+    src/control.cpp
 )
 
 target_include_directories(szakdolgozat PRIVATE src)

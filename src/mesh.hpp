@@ -1,6 +1,5 @@
 #pragma once
 #include <cstddef>
-#include <iosfwd> // std::ostream elődeklaráció
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -55,4 +54,4 @@ private:
 };
 
 // MSH v2 ASCII beolvasás (Nodes, Elements[etype=2], PhysicalNames). Siker esetén mesh feltöltve, egyébként MeshError kivétel dobódik.
-void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log);
+void load_msh2(const std::string &path, Mesh &mesh);

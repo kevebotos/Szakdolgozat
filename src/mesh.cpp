@@ -2,7 +2,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <iostream>
 #include <vector>
 #include <cctype>
 #include <utility>
@@ -68,7 +67,7 @@ namespace
   }
 }
 
-void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
+void load_msh2(const std::string &path, Mesh &mesh)
 {
   std::ifstream input(path);
   if (!input)
@@ -328,10 +327,7 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
         throw_at_line(lineNo, "A $Elements blokkot $EndElements sorral kell lezárni.");
       }
 
-      if (skipped > 0)
-      {
-        log << "[INFO] " << skipped << " olyan elemet találtam, amit ez a program kihagyott.\n";
-      }
+      // Kihagyott elemek figyelmen kívül hagyása (nincs kiírás)
       continue;
     }
 
@@ -365,13 +361,5 @@ void load_msh2(const std::string &path, Mesh &mesh, std::ostream &log)
   }
 
   mesh = std::move(fresh);
-
-  const std::size_t nodeCount = (mesh.nodes.size() > 0 ? mesh.nodes.size() - 1 : 0);
-  log << "[INFO] Csomópontok száma: " << nodeCount << "\n";
-  log << "[INFO] 1D elemek száma: " << mesh.lines.size() << "\n";
-  log << "[INFO] Háromszögek száma: " << mesh.tris.size() << "\n";
-  if (mesh.tris.empty())
-  {
-    log << "[FIGYELEM] Nem találtam háromszög elemeket (etype=2).\n";
-  }
+  // Kimenet most a main.cpp-ben van kontrollálva a control.txt alapján
 }

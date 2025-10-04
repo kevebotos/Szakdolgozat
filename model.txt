@@ -5,7 +5,7 @@ VVER-440 reactor model
 $EndModelInfo
 
 # Zones - 2D (térfogati) elemek
-# Formátum: név "physGroup1" ["physGroup2" ...] "leírás"
+# Formátum: név "physGroup1" ["physGroup2" ...] "leírás (minimum üres "")"
 $Zones
 5
 FuelRegion "Fuel" "Active fuel assembly region"
