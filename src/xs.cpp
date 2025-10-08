@@ -33,7 +33,6 @@ static inline std::string strip_comment(const std::string &line)
   return result;
 }
 
-// Egyszerű, kezdőbarát segédfüggvények a dobásokhoz és számlálósor olvasásához
 namespace
 {
   [[noreturn]] void throw_at_line(std::size_t currentLine, const std::string &message)
@@ -140,8 +139,8 @@ void load_xs(const std::string &path, XsLibrary &library)
     throw XsError("Nem sikerült megnyitni a keresztmetszet fájlt: " + path);
   }
 
-  XsLibrary fresh; // Ide töltjük be a kész library-t
-  std::string line; // Az aktuálisan olvasott sor
+  XsLibrary fresh;        // Ide töltjük be a kész library-t
+  std::string line;       // Az aktuálisan olvasott sor
   std::size_t lineNo = 0; // Hibaüzenethez: hanyadik sorban járunk
 
   while (std::getline(input, line))

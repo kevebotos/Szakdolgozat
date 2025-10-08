@@ -1,7 +1,5 @@
 # VVER-440 Model File
 # Ez a fájl definiálja a zónákat, peremeket, keverékeket és anyag-hozzárendeléseket
-# Formátum: GMSH-szerű blokk struktúra ($Section ... $EndSection)
-# Kommentek: # karakterrel kezdődnek
 
 $ModelInfo
 VVER-440 reactor model
@@ -38,7 +36,7 @@ $EndBoundaries
 # MIXTURES - Anyagkeverékek elemi komponensekből
 # ==================================================
 # Formátum: MixtureName density componentCount elem1 atoms1 elem2 atoms2 ...
-# density: anyagsűrűség [g/cm³]
+# density: anyagsűrűség
 # componentCount: hány elemi komponensből áll
 # elemN: elem neve (pl. H, O, U235, U238, Zr)
 # atomsN: atomszám vagy koncentráció

@@ -1,7 +1,5 @@
 # VVER-440 Cross Section Library
 # Ez a fájl definiálja a kétcsoportos makroszkopikus hatáskeresztmetszeteket
-# Formátum: GMSH-szerű blokk struktúra ($Section ... $EndSection)
-# Kommentek: # karakterrel kezdődnek
 
 $XsInfo
 VVER-440 two-group library

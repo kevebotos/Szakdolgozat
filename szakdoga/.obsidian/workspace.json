@@ -1,0 +1,208 @@
+{
+  "main": {
+    "id": "cb4ef3b3c59bebf0",
+    "type": "split",
+    "children": [
+      {
+        "id": "556c32aadb2ebe3f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "dcec6e1a71216246",
+            "type": "leaf",
+            "state": {
+              "type": "canvas",
+              "state": {
+                "file": "model_hpp.canvas",
+                "viewState": {
+                  "x": 76.82719546973844,
+                  "y": -52.902387864247174,
+                  "zoom": 0.03863695133132841
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "model_hpp"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "19a1e1c58480bf25",
+    "type": "split",
+    "children": [
+      {
+        "id": "9a2f9153b3ae0bd9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f22fc1527b63d9d9",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "3dd99105873066f0",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "ac56c41dffee316d",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "2ef095b125811050",
+    "type": "split",
+    "children": [
+      {
+        "id": "eeebac1d5032ad60",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e32c06e63a7773b5",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "DataFlow-Main.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for DataFlow-Main"
+            }
+          },
+          {
+            "id": "7851a57a8fa91c56",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "DataFlow-Main.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from DataFlow-Main"
+            }
+          },
+          {
+            "id": "a8c2b0ad27a4549b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "e54e960e2835c144",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "DataFlow-Main.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of DataFlow-Main"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "dcec6e1a71216246",
+  "lastOpenFiles": [
+    "mesh_hpp.canvas",
+    "hpp_overview.canvas",
+    "control_hpp.canvas",
+    "DataFlow-Main.md",
+    "01-Project-Overview.md",
+    "00-Index.md",
+    "Architecture-Canvas.canvas",
+    "Mesh-Flow-Canvas.canvas",
+    "Module-XS-Overview.md",
+    "Master-Architecture-Canvas.canvas",
+    "Files-Summary.md",
+    "README.md",
+    "Debug-Guide.md",
+    "Module-Control-Code.md",
+    "Module-Model-Code.md",
+    "Module-XS-Code.md",
+    "Module-Mesh-Code.md",
+    "Model-Flow-Canvas.canvas",
+    "XS-Flow-Canvas.canvas",
+    "Basics-STL.md",
+    "03-Architecture-Map.md",
+    "02-Quick-Start.md",
+    "Untitled.canvas",
+    "FAQ-Syntax.md",
+    "Module-Control-Overview.md",
+    "Module-Model-Overview.md",
+    "Untitled.md",
+    "Basics-Pointers.md",
+    "Module-Mesh-Overview.md",
+    "Welcome.md"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+	"nodes":[
+		{"id":"model-zone","type":"text","text":"## Zone struktúra\n\n```cpp\nstruct Zone {\n  std::string name;\n  std::vector<std::string> physicalGroups;\n};\n```\n\n2D térfogati régiók\nÖsszeköti a logikai zónát a mesh fizikai csoportjaival","x":-480,"y":-456,"width":400,"height":313},
+		{"id":"model-boundary","type":"text","text":"## Boundary struktúra\n\n```cpp\nstruct Boundary {\n  std::string name;\n  std::vector<std::string> physicalGroups;\n};\n```\n\n1D felületi peremek\nÖsszeköti a logikai peremfeltételt a mesh fizikai csoportjaival","x":-40,"y":-456,"width":420,"height":313},
+		{"id":"model-mixture","type":"text","text":"## Mixture struktúrák\n\n```cpp\nstruct MixtureComponent {\n  std::string element; // \"H\", \"O\", \"U235\"\n  double atoms;        // atom szám\n};\n\nstruct Mixture {\n  std::string name;\n  double density;  // g/cm³\n  std::vector<MixtureComponent> components;\n};\n```\n\nAnyagkeverékek elemi komponensekből","x":-480,"y":-73,"width":400,"height":433},
+		{"id":"model-material","type":"text","text":"## Material struktúra\n\n```cpp\nstruct Material {\n  std::string zoneName;\n  std::string mixtureName;\n};\n```\n\nZóna → Keverék hozzárendelés","x":-40,"y":-40,"width":420,"height":241},
+		{"id":"model-library","type":"text","text":"## ModelLibrary struktúra\n\n```cpp\nstruct ModelLibrary {\n  std::string title;\n  std::vector<Zone> zones;\n  std::vector<Boundary> boundaries;\n  std::vector<Mixture> mixtures;\n  std::vector<Material> materials;\n  \n  const Zone *findZone(const std::string &name) const;\n  const Boundary *findBoundary(const std::string &name) const;\n  const Mixture *findMixture(const std::string &name) const;\n};\n```\n\nTeljes model könyvtár + helper függvények","x":-280,"y":580,"width":500,"height":380},
+		{"id":"model-error","type":"text","text":"## Hibakezelés\n\n```cpp\nclass ModelError : public std::runtime_error {\npublic:\n  using std::runtime_error::runtime_error;\n};\n\nclass ModelParseError : public ModelError {\npublic:\n  ModelParseError(std::size_t line,\n                  const std::string &message)\n      : ModelError(message), m_line(line) {}\n  \n  std::size_t line() const noexcept {\n    return m_line;\n  }\nprivate:\n  std::size_t m_line = 0;\n};\n```\n\n**ModelError**: általános hiba\n**ModelParseError**: parsing hiba + sorszám","x":380,"y":560,"width":440,"height":420},
+		{"id":"model-api","type":"text","text":"## API\n\n```cpp\nvoid loadModel(const std::string &path,\n               ModelLibrary &model);\n```\n\nBeolvassa a model fájlt.\n\n**Dobhat**: `ModelError`, `ModelParseError`","x":140,"y":1120,"width":420,"height":240}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"model-zone","fromSide":"bottom","toNode":"model-mixture","toSide":"top"},
+		{"id":"e2","fromNode":"model-boundary","fromSide":"bottom","toNode":"model-material","toSide":"top"},
+		{"id":"e3","fromNode":"model-mixture","fromSide":"bottom","toNode":"model-library","toSide":"top"},
+		{"id":"e4","fromNode":"model-material","fromSide":"bottom","toNode":"model-library","toSide":"top"},
+		{"id":"e5","fromNode":"model-library","fromSide":"right","toNode":"model-error","toSide":"left"},
+		{"id":"e6","fromNode":"model-library","fromSide":"bottom","toNode":"model-api","toSide":"top"},
+		{"id":"e7","fromNode":"model-error","fromSide":"bottom","toNode":"model-api","toSide":"top"}
+	]
+}

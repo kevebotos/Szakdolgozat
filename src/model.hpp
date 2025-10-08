@@ -15,7 +15,7 @@ struct Zone
 struct Boundary
 {
   std::string name;
-  std::vector<std::string> physicalGroups; // 1D (felületi/él) mesh physical group nevek
+  std::vector<std::string> physicalGroups; // 1D (felület) mesh physical group nevek
 };
 
 // Anyag keverék komponens
@@ -29,7 +29,7 @@ struct MixtureComponent
 struct Mixture
 {
   std::string name;
-  double density;                           // g/cm³
+  double density;
   std::vector<MixtureComponent> components;
 };
 

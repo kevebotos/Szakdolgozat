@@ -1,0 +1,13 @@
+{
+	"nodes":[
+		{"id":"mesh-struct","type":"text","text":"## Mesh struktúra\n\n```cpp\nstruct Mesh {\n  struct Node { double x, y; };\n  struct Tri { int a, b, c; int phys; };\n  struct Line { int a, b; int phys; };\n  \n  std::vector<Node> nodes;  // 1-based!\n  std::vector<Tri> tris;\n  std::vector<Line> lines;\n  std::map<int, std::string> physNames;\n};\n```\n\n**nodes**: 1-based indexelés (nodes[0] üres)\n**tris**: háromszög elemek (a,b,c csomópont ID-k)\n**lines**: él elemek peremekhez (a,b csomópont ID-k)\n**phys**: fizikai csoport ID\n**physNames**: ID → név mapping","x":-352,"y":-320,"width":404,"height":480},
+		{"id":"mesh-error","type":"text","text":"## Hibakezelés\n\n```cpp\nclass MeshError : public std::runtime_error {\npublic:\n  using std::runtime_error::runtime_error;\n};\n\nclass MeshParseError : public MeshError {\npublic:\n  MeshParseError(std::size_t line, \n                 const std::string &message)\n      : MeshError(message), m_line(line) {}\n  \n  std::size_t line() const noexcept { \n    return m_line; \n  }\nprivate:\n  std::size_t m_line = 0;\n};\n```\n\n**MeshError**: általános hiba\n**MeshParseError**: parsing hiba + sorszám","x":160,"y":-370,"width":450,"height":580},
+		{"id":"mesh-format","type":"text","text":"## Input formátum\n\nGMSH MSH v2 ASCII:\n- `$PhysicalNames` ... `$EndPhysicalNames`\n- `$Nodes` ... `$EndNodes`\n- `$Elements` ... `$EndElements`\n\nCsak etype=2 (háromszög) és etype=1 (vonal) támogatott","x":-460,"y":260,"width":364,"height":264},
+		{"id":"mesh-api","type":"text","text":"## API\n\n```cpp\nvoid load_msh2(const std::string &path, \n               Mesh &mesh);\n```\n\nBeolvassa a GMSH MSH v2 ASCII fájlt.\n\n**Dobhat**: `MeshError`, `MeshParseError`\n**Feltölti**: `mesh` struktúrát","x":160,"y":260,"width":380,"height":281}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"mesh-struct","fromSide":"right","toNode":"mesh-error","toSide":"left"},
+		{"id":"e2","fromNode":"mesh-struct","fromSide":"bottom","toNode":"mesh-format","toSide":"top"},
+		{"id":"e3","fromNode":"mesh-format","fromSide":"right","toNode":"mesh-api","toSide":"left"}
+	]
+}

@@ -5,22 +5,18 @@
 #include <vector>
 #include <cctype>
 
-// levágja az elejéről/végéről a whitespace-et (CRLF esetén a '\r'-t is)
 static inline void trim_inplace(std::string &s)
 {
-  // Távolítsuk el az elejéről a whitespace karaktereket
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
   {
     s.erase(s.begin());
   }
-  // Távolítsuk el a végéről a whitespace karaktereket (CRLF esetén a '\r'-t is)
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
   {
     s.pop_back();
   }
 }
 
-// Kommentek eltávolítása a sorból (# karakter után mindent töröl)
 static inline std::string strip_comment(const std::string &line)
 {
   std::string result = line;
@@ -32,7 +28,6 @@ static inline std::string strip_comment(const std::string &line)
   return result;
 }
 
-// Egyszerű, kezdőbarát segédfüggvények a dobásokhoz és számlálósor olvasásához
 namespace
 {
   [[noreturn]] void throw_at_line(std::size_t currentLine, const std::string &message)
@@ -71,13 +66,13 @@ namespace
   }
 }
 
-const Zone *ModelLibrary::findZone(const std::string &name) const
+const Zone *ModelLibrary::findZone(const std::string &name) const // randge based még mindig nem elég. std::find_if vagy std::ranges::find!!!!!!
 {
-  for (std::size_t i = 0; i < zones.size(); ++i)
+  for (const Zone &zone : zones)
   {
-    if (zones[i].name == name)
+    if (zone.name == name)
     {
-      return &zones[i];
+      return &zone;
     }
   }
   return nullptr;
@@ -115,8 +110,8 @@ void loadModel(const std::string &path, ModelLibrary &model)
     throw ModelError("Nem sikerült megnyitni a model fájlt: " + path);
   }
 
-  ModelLibrary fresh; // Ide töltjük be a kész modelt
-  std::string line;   // Az aktuálisan olvasott sor
+  ModelLibrary fresh;     // Ide töltjük be a kész modelt
+  std::string line;       // Az aktuálisan olvasott sor
   std::size_t lineNo = 0; // Hibaüzenethez: hanyadik sorban járunk
 
   while (std::getline(input, line))

@@ -1,0 +1,27 @@
+{
+	"nodes":[
+		{"id":"mesh-canvas","type":"file","file":"mesh_hpp.canvas","x":-1200,"y":-600,"width":760,"height":600},
+		{"id":"xs-canvas","type":"file","file":"xs_hpp.canvas","x":-140,"y":-600,"width":640,"height":600},
+		{"id":"model-canvas","type":"file","file":"model_hpp.canvas","x":-1200,"y":100,"width":520,"height":600},
+		{"id":"control-canvas","type":"file","file":"control_hpp.canvas","x":-170,"y":100,"width":670,"height":600},
+		{"id":"common-pattern","type":"text","text":"## Közös minták\n\n### Hibakezelés minden parsernél:\n\n```cpp\nclass XxxError : public std::runtime_error {\npublic:\n  using std::runtime_error::runtime_error;\n};\n\nclass XxxParseError : public XxxError {\npublic:\n  XxxParseError(std::size_t line, \n                const std::string &message)\n      : XxxError(message), m_line(line) {}\n  \n  std::size_t line() const noexcept { \n    return m_line; \n  }\nprivate:\n  std::size_t m_line = 0;\n};\n```\n\n**Pattern**: általános hiba + parsing hiba (sorszámmal)\n\n### API minden parsernél:\n\n```cpp\nvoid load_xxx(const std::string &path, Xxx &data);\n```\n\n**Kivétel**: `control.hpp` nem dob hibát (figyelmeztet)","x":600,"y":-900,"width":600,"height":772},
+		{"id":"helper-functions","type":"text","text":"## Helper függvények\n\n### mesh.hpp\n```cpp\n// Nincs helper, csak load_msh2()\n```\n\n### xs.hpp\n```cpp\nconst XsMaterial::SPtr find_material(\n  const std::string &name) const;\nconst XsBoundary *find_boundary(\n  const std::string &name) const;\n```\n\n### model.hpp\n```cpp\nconst Zone *findZone(const std::string &name) const;\nconst Boundary *findBoundary(const std::string &name) const;\nconst Mixture *findMixture(const std::string &name) const;\n```\n\n### control.hpp\n```cpp\nbool getFlag(const std::string &name) const;\nint getEffectiveVerbosity(\n  const ParserOutputConfig &config) const;\n```\n\n**Pattern**: keresés név alapján + konfiguráció lekérdezés","x":-1200,"y":800,"width":572,"height":783},
+		{"id":"smart-pointers","type":"text","text":"## Smart pointer használat\n\n### Csak XsMaterial használ:\n\n```cpp\ntypedef std::shared_ptr<XsMaterial> SPtr;\ntypedef std::unique_ptr<XsMaterial> UPtr;\ntypedef std::weak_ptr<XsMaterial> WPtr;\n```\n\nA `find_material()` shared_ptr-t ad vissza\n\n### Miért?\n- Anyagok több helyen is használhatók\n- Megosztott tulajdonlás szükséges\n- A többi struktúra egyszerű érték-szemantikát használ","x":-400,"y":800,"width":460,"height":427},
+		{"id":"data-structures","type":"text","text":"## Adatstruktúrák összehasonlítása\n\n| Parser | Fő struktúra | Alstruktúrák |\n|--------|--------------|-------------|\n| **mesh** | `Mesh` | `Node`, `Tri`, `Line` |\n| **xs** | `XsLibrary` | `XsMaterial`, `XsBoundary` |\n| **model** | `ModelLibrary` | `Zone`, `Boundary`, `Mixture`, `Material` |\n| **control** | `ControlConfig` | `ParserOutputConfig` |\n\n### Közös jellemzők:\n- Minden fő struktúra tartalmaz `std::vector`-t\n- Minden fő struktúra tartalmaz helper függvényeket (kivéve control)\n- Minden struktúra egyszerű POD-szerű (nincs komplex OOP)","x":600,"y":-27,"width":548,"height":427},
+		{"id":"differences","type":"text","text":"## Fő különbségek\n\n### mesh.hpp\n- 1-based indexelés (nodes[0] üres)\n- Geometriai adatok (x, y koordináták)\n- Legegyszerűbb struktúra\n\n### xs.hpp\n- Fizikai adatok (keresztmetszetek)\n- 2D vector scatter mátrixhoz\n- Smart pointer typedef-ek\n\n### model.hpp\n- Legtöbb alstruktúra (4 db)\n- Hierarchikus felépítés (Zone→Material→Mixture)\n- Legtöbb helper függvény\n\n### control.hpp\n- Nincs parse error (nem dob hibát)\n- Legkevesebb alstruktúra\n- Master/slave konfiguráció logika","x":500,"y":640,"width":415,"height":700},
+		{"id":"title","type":"text","text":"# Header Files Áttekintés\n\nA 4 parser header file összehasonlítása","x":-440,"y":-1260,"width":337,"height":89,"color":"6"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"title","fromSide":"bottom","toNode":"mesh-canvas","toSide":"top"},
+		{"id":"e2","fromNode":"title","fromSide":"bottom","toNode":"xs-canvas","toSide":"top"},
+		{"id":"e3","fromNode":"mesh-canvas","fromSide":"bottom","toNode":"model-canvas","toSide":"top"},
+		{"id":"e4","fromNode":"xs-canvas","fromSide":"bottom","toNode":"control-canvas","toSide":"top"},
+		{"id":"e5","fromNode":"title","fromSide":"right","toNode":"common-pattern","toSide":"left"},
+		{"id":"e6","fromNode":"common-pattern","fromSide":"bottom","toNode":"data-structures","toSide":"top"},
+		{"id":"e7","fromNode":"model-canvas","fromSide":"bottom","toNode":"helper-functions","toSide":"top"},
+		{"id":"e8","fromNode":"control-canvas","fromSide":"bottom","toNode":"smart-pointers","toSide":"top"},
+		{"id":"e9","fromNode":"helper-functions","fromSide":"right","toNode":"smart-pointers","toSide":"left"},
+		{"id":"e10","fromNode":"smart-pointers","fromSide":"right","toNode":"differences","toSide":"left"},
+		{"id":"e11","fromNode":"data-structures","fromSide":"bottom","toNode":"differences","toSide":"top"}
+	]
+}

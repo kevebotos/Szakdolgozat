@@ -1,0 +1,15 @@
+{
+	"nodes":[
+		{"id":"xs-material","type":"text","text":"## XsMaterial struktúra\n\n```cpp\nstruct XsMaterial {\n  typedef std::shared_ptr<XsMaterial> SPtr;\n  typedef std::unique_ptr<XsMaterial> UPtr;\n  typedef std::weak_ptr<XsMaterial> WPtr;\n  \n  std::string name;\n  std::vector<double> sigma_t;\n  std::vector<double> sigma_a;\n  std::vector<double> nu_sigma_f;\n  std::vector<double> chi;\n  std::vector<std::vector<double>> scatter;\n};\n```\n\nKétcsoportos keresztmetszetek:\n- **sigma_t**: total cross section\n- **sigma_a**: absorption\n- **nu_sigma_f**: fission production\n- **chi**: fission spectrum\n- **scatter**: szórási mátrix (2×2)","x":-400,"y":-280,"width":500,"height":480},
+		{"id":"xs-boundary","type":"text","text":"## XsBoundary struktúra\n\n```cpp\nstruct XsBoundary {\n  std::string name;\n  std::string type; // \"vacuum\" vagy \"interface\"\n};\n```\n\nPeremfeltétel típusok mesh fizikai csoportokhoz","x":140,"y":-280,"width":400,"height":220},
+		{"id":"xs-library","type":"text","text":"## XsLibrary struktúra\n\n```cpp\nstruct XsLibrary {\n  std::string title;\n  int energyGroupCount = 0;\n  std::vector<std::string> energyGroupNames;\n  std::vector<XsMaterial> materials;\n  std::vector<XsBoundary> boundaries;\n  \n  const XsMaterial::SPtr find_material(\n    const std::string &name) const;\n  const XsBoundary *find_boundary(\n    const std::string &name) const;\n};\n```\n\nTeljes XS könyvtár adatai + helper függvények","x":-400,"y":260,"width":500,"height":360},
+		{"id":"xs-error","type":"text","text":"## Hibakezelés\n\n```cpp\nclass XsError : public std::runtime_error {\npublic:\n  using std::runtime_error::runtime_error;\n};\n\nclass XsParseError : public XsError {\npublic:\n  XsParseError(std::size_t line,\n               const std::string &message)\n      : XsError(message), m_line(line) {}\n  \n  std::size_t line() const noexcept {\n    return m_line;\n  }\nprivate:\n  std::size_t m_line = 0;\n};\n```\n\n**XsError**: általános hiba\n**XsParseError**: parsing hiba + sorszám","x":140,"y":-20,"width":400,"height":420},
+		{"id":"xs-api","type":"text","text":"## API\n\n```cpp\nvoid load_xs(const std::string &path,\n             XsLibrary &library);\n```\n\nBeolvassa a keresztmetszet fájlt.\n\n**Dobhat**: `XsError`, `XsParseError`","x":140,"y":460,"width":400,"height":220}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"xs-material","fromSide":"bottom","toNode":"xs-library","toSide":"top"},
+		{"id":"e2","fromNode":"xs-boundary","fromSide":"bottom","toNode":"xs-error","toSide":"top"},
+		{"id":"e3","fromNode":"xs-library","fromSide":"right","toNode":"xs-api","toSide":"left"},
+		{"id":"e4","fromNode":"xs-error","fromSide":"bottom","toNode":"xs-api","toSide":"top"}
+	]
+}

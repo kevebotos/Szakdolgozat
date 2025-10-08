@@ -1,0 +1,13 @@
+{
+	"nodes":[
+		{"id":"parser-output","type":"text","text":"## ParserOutputConfig struktúra\n\n```cpp\nstruct ParserOutputConfig {\n  int verbosity = 1;\n  std::map<std::string, bool> flags;\n  \n  bool getFlag(const std::string &name) const;\n};\n```\n\nEgy parser kimenet konfigurációja\n\n**verbosity**: 0-5 szint\n- 0 = semmi\n- 1 = alap\n- 2 = részletes\n- 3 = debug\n- 4 = minden + debug info\n- 5 = csak debug info\n\n**flags**: specifikus kiírási kapcsolók\n(pl. \"physical_groups\", \"materials\")","x":-400,"y":-240,"width":480,"height":480},
+		{"id":"control-config","type":"text","text":"## ControlConfig struktúra\n\n```cpp\nstruct ControlConfig {\n  ParserOutputConfig meshOutput;\n  ParserOutputConfig xsOutput;\n  ParserOutputConfig modelOutput;\n  \n  int masterVerbosity = -1;\n  std::string format = \"plain\";\n  \n  int getEffectiveVerbosity(\n    const ParserOutputConfig &config) const;\n};\n```\n\nTeljes control konfiguráció\n\n**masterVerbosity**: ha >= 0, felülírja az összes parser verbosity-t\n**getEffectiveVerbosity**: visszaadja az effektív verbosity-t (master vagy parser saját)","x":140,"y":-240,"width":500,"height":480},
+		{"id":"control-api","type":"text","text":"## API\n\n```cpp\nvoid loadControl(const std::string &path,\n                 ControlConfig &config);\n```\n\nBetölti a control.txt fájlt.\n\n**Ha nincs fájl**: default értékekkel tér vissza (nem hiba)\n**Nem dob kivételt**: figyelmeztetéseket ír stderr-re","x":-120,"y":300,"width":440,"height":280},
+		{"id":"control-format","type":"text","text":"## Control fájl formátum\n\n```\n$MeshOutput\nverbosity 2\nphysical_groups on\n$EndMeshOutput\n\n$GlobalOutput\nmaster_verbosity 3\n$EndGlobalOutput\n```\n\nGMSH-szerű $Section ... $EndSection blokkok\nKomment támogatás: #","x":-400,"y":300,"width":400,"height":340}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"parser-output","fromSide":"right","toNode":"control-config","toSide":"left"},
+		{"id":"e2","fromNode":"control-config","fromSide":"bottom","toNode":"control-api","toSide":"top"},
+		{"id":"e3","fromNode":"control-format","fromSide":"right","toNode":"control-api","toSide":"left"}
+	]
+}

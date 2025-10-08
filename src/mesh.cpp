@@ -21,7 +21,6 @@ static inline void trim_inplace(std::string &s)
   }
 }
 
-// Egyszerű, kezdőbarát segédfüggvények a dobásokhoz és számlálósor olvasásához
 namespace
 {
   [[noreturn]] void throw_at_line(std::size_t currentLine, const std::string &message)

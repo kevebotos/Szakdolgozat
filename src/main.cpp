@@ -152,113 +152,113 @@ int main(int argc, char **argv)
     std::cout << "  1D elemek: " << M.lines.size() << "\n";
     std::cout << "  Háromszögek: " << M.tris.size() << "\n";
 
-  // Verbosity >= 2 VAGY physical_groups flag: Fizikai csoportok listája
-  if ((meshVerbosity >= 2 || control.meshOutput.getFlag("physical_groups")) && !M.physNames.empty())
-  {
-    std::cout << "  Fizikai csoportok (id → név):\n";
-    for (const auto &entry : M.physNames)
+    // Verbosity >= 2 VAGY physical_groups flag: Fizikai csoportok listája
+    if ((meshVerbosity >= 2 || control.meshOutput.getFlag("physical_groups")) && !M.physNames.empty())
     {
-      std::cout << "    " << entry.first << " → " << entry.second << "\n";
-    }
-  }
-
-  // Verbosity >= 2 VAGY elements_per_group flag: Háromszögek fizikai csoport szerint
-  std::map<int, std::size_t> triangleCountPerPhys;
-  for (const auto &tri : M.tris)
-  {
-    triangleCountPerPhys[tri.phys] += 1;
-  }
-  if ((meshVerbosity >= 2 || control.meshOutput.getFlag("elements_per_group")) && !triangleCountPerPhys.empty())
-  {
-    std::cout << "  Háromszög elemek fizikai csoport szerint:\n";
-    for (const auto &entry : triangleCountPerPhys)
-    {
-      const int physId = entry.first;
-      const std::size_t triCount = entry.second;
-      std::cout << "    phys=" << physId << " (" << lookup_phys_name(M, physId) << ") : " << triCount << " db\n";
-    }
-  }
-
-  // 1D elemek feldolgozása
-  std::map<int, std::size_t> lineCountPerPhys;
-  std::map<int, std::set<int>> lineNodesPerPhys;
-  for (const auto &lineElem : M.lines)
-  {
-    lineCountPerPhys[lineElem.phys] += 1;
-    lineNodesPerPhys[lineElem.phys].insert(lineElem.a);
-    lineNodesPerPhys[lineElem.phys].insert(lineElem.b);
-  }
-
-  // Verbosity >= 2: 1D elemek részletei
-  if (meshVerbosity >= 2)
-  {
-    if (!lineCountPerPhys.empty())
-    {
-      std::cout << "  1D (él) elemek fizikai csoport szerint:\n";
-      for (const auto &entry : lineCountPerPhys)
+      std::cout << "  Fizikai csoportok (id → név):\n";
+      for (const auto &entry : M.physNames)
       {
-        const int physId = entry.first;
-        const std::size_t lineCount = entry.second;
-        const std::size_t nodeCountOnBoundary = lineNodesPerPhys[physId].size();
-        std::cout << "    phys=" << physId << " (" << lookup_phys_name(M, physId) << ") : "
-                  << lineCount << " db él, " << nodeCountOnBoundary << " db csomópont\n";
+        std::cout << "    " << entry.first << " → " << entry.second << "\n";
       }
     }
-    else
-    {
-      std::cout << "  [MEGJEGYZÉS] Nem találtam 1D elemeket, így a peremet később kell definiálni.\n";
-    }
-  }
 
-  // Verbosity >= 3 VAGY boundary_nodes flag: Összesített boundary nodes
-  if ((meshVerbosity >= 3 || control.meshOutput.getFlag("boundary_nodes")) && !lineNodesPerPhys.empty())
-  {
-    std::set<int> allBoundaryNodes;
-    for (const auto &entry : lineNodesPerPhys)
-    {
-      allBoundaryNodes.insert(entry.second.begin(), entry.second.end());
-    }
-    std::cout << "  Összesen " << allBoundaryNodes.size() << " db egyedi csomópont kapcsolódik 1D elemekhez.\n";
-  }
-
-  // VALIDÁCIÓ 1: Fizikai csoport ellenőrzés háromszögekre
-  if (control.meshOutput.getFlag("validate_physical_groups"))
-  {
-    int orphanCount = 0;
-    std::set<int> orphanPhysIds;
+    // Verbosity >= 2 VAGY elements_per_group flag: Háromszögek fizikai csoport szerint
+    std::map<int, std::size_t> triangleCountPerPhys;
     for (const auto &tri : M.tris)
     {
-      if (M.physNames.find(tri.phys) == M.physNames.end())
+      triangleCountPerPhys[tri.phys] += 1;
+    }
+    if ((meshVerbosity >= 2 || control.meshOutput.getFlag("elements_per_group")) && !triangleCountPerPhys.empty())
+    {
+      std::cout << "  Háromszög elemek fizikai csoport szerint:\n";
+      for (const auto &entry : triangleCountPerPhys)
       {
-        orphanCount++;
-        orphanPhysIds.insert(tri.phys);
+        const int physId = entry.first;
+        const std::size_t triCount = entry.second;
+        std::cout << "    phys=" << physId << " (" << lookup_phys_name(M, physId) << ") : " << triCount << " db\n";
       }
     }
-    if (orphanCount > 0)
-    {
-      std::cout << "\n[VALIDÁCIÓS HIBA] " << orphanCount
-                << " háromszög nincs definiált fizikai csoportban!\n";
-      std::cout << "  Ismeretlen fizikai csoport ID-k:";
-      for (int physId : orphanPhysIds)
-      {
-        std::cout << " " << physId;
-      }
-      std::cout << "\n";
-    }
-    else
-    {
-      std::cout << "\n[VALIDÁCIÓ OK] Minden háromszög fizikai csoportban van.\n";
-    }
-  }
 
-  // Verbosity >= 4: Debug információk
-  if (meshVerbosity >= 4)
-  {
-    std::cout << "\n[DEBUG] Mesh parsing részletek:\n";
-    std::cout << "  Parsing idő: " << meshDuration.count() << " ms\n";
-    std::cout << "  Fájl méret: " << std::fixed << std::setprecision(2) << getFileSizeMB(meshPath) << " MB\n";
-    std::cout << "  Becsült memória használat: " << std::fixed << std::setprecision(2) << estimateMemoryMB(M) << " MB\n";
-  }
+    // 1D elemek feldolgozása
+    std::map<int, std::size_t> lineCountPerPhys;
+    std::map<int, std::set<int>> lineNodesPerPhys;
+    for (const auto &lineElem : M.lines)
+    {
+      lineCountPerPhys[lineElem.phys] += 1;
+      lineNodesPerPhys[lineElem.phys].insert(lineElem.a);
+      lineNodesPerPhys[lineElem.phys].insert(lineElem.b);
+    }
+
+    // Verbosity >= 2: 1D elemek részletei
+    if (meshVerbosity >= 2)
+    {
+      if (!lineCountPerPhys.empty())
+      {
+        std::cout << "  1D (él) elemek fizikai csoport szerint:\n";
+        for (const auto &entry : lineCountPerPhys)
+        {
+          const int physId = entry.first;
+          const std::size_t lineCount = entry.second;
+          const std::size_t nodeCountOnBoundary = lineNodesPerPhys[physId].size();
+          std::cout << "    phys=" << physId << " (" << lookup_phys_name(M, physId) << ") : "
+                    << lineCount << " db él, " << nodeCountOnBoundary << " db csomópont\n";
+        }
+      }
+      else
+      {
+        std::cout << "  [MEGJEGYZÉS] Nem találtam 1D elemeket, így a peremet később kell definiálni.\n";
+      }
+    }
+
+    // Verbosity >= 3 VAGY boundary_nodes flag: Összesített boundary nodes
+    if ((meshVerbosity >= 3 || control.meshOutput.getFlag("boundary_nodes")) && !lineNodesPerPhys.empty())
+    {
+      std::set<int> allBoundaryNodes;
+      for (const auto &entry : lineNodesPerPhys)
+      {
+        allBoundaryNodes.insert(entry.second.begin(), entry.second.end());
+      }
+      std::cout << "  Összesen " << allBoundaryNodes.size() << " db egyedi csomópont kapcsolódik 1D elemekhez.\n";
+    }
+
+    // VALIDÁCIÓ 1: Fizikai csoport ellenőrzés háromszögekre
+    if (control.meshOutput.getFlag("validate_physical_groups"))
+    {
+      int orphanCount = 0;
+      std::set<int> orphanPhysIds;
+      for (const auto &tri : M.tris)
+      {
+        if (M.physNames.find(tri.phys) == M.physNames.end())
+        {
+          orphanCount++;
+          orphanPhysIds.insert(tri.phys);
+        }
+      }
+      if (orphanCount > 0)
+      {
+        std::cout << "\n[VALIDÁCIÓS HIBA] " << orphanCount
+                  << " háromszög nincs definiált fizikai csoportban!\n";
+        std::cout << "  Ismeretlen fizikai csoport ID-k:";
+        for (int physId : orphanPhysIds)
+        {
+          std::cout << " " << physId;
+        }
+        std::cout << "\n";
+      }
+      else
+      {
+        std::cout << "\n[VALIDÁCIÓ OK] Minden háromszög fizikai csoportban van.\n";
+      }
+    }
+
+    // Verbosity >= 4: Debug információk
+    if (meshVerbosity >= 4)
+    {
+      std::cout << "\n[DEBUG] Mesh parsing részletek:\n";
+      std::cout << "  Parsing idő: " << meshDuration.count() << " ms\n";
+      std::cout << "  Fájl méret: " << std::fixed << std::setprecision(2) << getFileSizeMB(meshPath) << " MB\n";
+      std::cout << "  Becsült memória használat: " << std::fixed << std::setprecision(2) << estimateMemoryMB(M) << " MB\n";
+    }
   } // Mesh verbosity >= 1 && <= 4 vége
 
   // Verbosity == 5: CSAK debug információk
@@ -302,140 +302,140 @@ int main(int argc, char **argv)
       std::cout << "[OK] Keresztmetszet könyvtár beolvasva: " << xsLibrary.title << "\n";
       std::cout << "  Energia csoportok száma: " << xsLibrary.energyGroupCount << "\n";
 
-    // Energia csoport nevek (verbosity >= 2)
-    if (xsVerbosity >= 2 && !xsLibrary.energyGroupNames.empty())
-    {
-      std::cout << "  Csoportnevek:";
-      for (std::size_t i = 0; i < xsLibrary.energyGroupNames.size(); ++i)
+      // Energia csoport nevek (verbosity >= 2)
+      if (xsVerbosity >= 2 && !xsLibrary.energyGroupNames.empty())
       {
-        std::cout << " " << xsLibrary.energyGroupNames[i];
-      }
-      std::cout << "\n";
-    }
-
-    // Anyag nevek (verbosity >= 2)
-    if (xsVerbosity >= 2 && !xsLibrary.materials.empty())
-    {
-      std::cout << "  Anyagok:";
-      for (std::size_t i = 0; i < xsLibrary.materials.size(); ++i)
-      {
-        std::cout << " " << xsLibrary.materials[i].name;
-      }
-      std::cout << "\n";
-    }
-
-    // Verbosity >= 2 VAGY cross_sections flag: Keresztmetszet értékek részletesen
-    if (xsVerbosity >= 2 || control.xsOutput.getFlag("cross_sections"))
-    {
-      for (std::size_t index = 0; index < xsLibrary.materials.size(); ++index)
-      {
-        const XsMaterial &mat = xsLibrary.materials[index];
-        std::cout << "    [" << mat.name << "]\n";
-        print_group_values("sigma_t", mat.sigma_t);
-        print_group_values("sigma_a", mat.sigma_a);
-        print_group_values("nu_sigma_f", mat.nu_sigma_f);
-        print_group_values("chi", mat.chi);
-
-        // Verbosity >= 3 VAGY scatter_matrix flag: Scatter mátrix
-        if (xsVerbosity >= 3 || control.xsOutput.getFlag("scatter_matrix"))
+        std::cout << "  Csoportnevek:";
+        for (std::size_t i = 0; i < xsLibrary.energyGroupNames.size(); ++i)
         {
-          std::cout << "    scatter mátrix:" << "\n";
-          for (std::size_t row = 0; row < mat.scatter.size(); ++row)
+          std::cout << " " << xsLibrary.energyGroupNames[i];
+        }
+        std::cout << "\n";
+      }
+
+      // Anyag nevek (verbosity >= 2)
+      if (xsVerbosity >= 2 && !xsLibrary.materials.empty())
+      {
+        std::cout << "  Anyagok:";
+        for (std::size_t i = 0; i < xsLibrary.materials.size(); ++i)
+        {
+          std::cout << " " << xsLibrary.materials[i].name;
+        }
+        std::cout << "\n";
+      }
+
+      // Verbosity >= 2 VAGY cross_sections flag: Keresztmetszet értékek részletesen
+      if (xsVerbosity >= 2 || control.xsOutput.getFlag("cross_sections"))
+      {
+        for (std::size_t index = 0; index < xsLibrary.materials.size(); ++index)
+        {
+          const XsMaterial &mat = xsLibrary.materials[index];
+          std::cout << "    [" << mat.name << "]\n";
+          print_group_values("sigma_t", mat.sigma_t);
+          print_group_values("sigma_a", mat.sigma_a);
+          print_group_values("nu_sigma_f", mat.nu_sigma_f);
+          print_group_values("chi", mat.chi);
+
+          // Verbosity >= 3 VAGY scatter_matrix flag: Scatter mátrix
+          if (xsVerbosity >= 3 || control.xsOutput.getFlag("scatter_matrix"))
           {
-            std::cout << "      ";
-            for (std::size_t col = 0; col < mat.scatter[row].size(); ++col)
+            std::cout << "    scatter mátrix:" << "\n";
+            for (std::size_t row = 0; row < mat.scatter.size(); ++row)
             {
-              std::cout << mat.scatter[row][col];
-              if (col + 1 < mat.scatter[row].size())
+              std::cout << "      ";
+              for (std::size_t col = 0; col < mat.scatter[row].size(); ++col)
               {
-                std::cout << " ";
+                std::cout << mat.scatter[row][col];
+                if (col + 1 < mat.scatter[row].size())
+                {
+                  std::cout << " ";
+                }
               }
+              std::cout << "\n";
             }
-            std::cout << "\n";
           }
         }
       }
-    }
 
-    // Peremfeltételek (verbosity >= 2)
-    if (xsVerbosity >= 2 && !xsLibrary.boundaries.empty())
-    {
-      std::cout << "\n  Peremfeltételek:\n";
-      for (std::size_t i = 0; i < xsLibrary.boundaries.size(); ++i)
+      // Peremfeltételek (verbosity >= 2)
+      if (xsVerbosity >= 2 && !xsLibrary.boundaries.empty())
       {
-        const XsBoundary &bound = xsLibrary.boundaries[i];
-        std::cout << "    [" << bound.name << "]\n";
-        std::cout << "      type: " << bound.type << "\n";
-      }
-    }
-
-    // Verbosity >= 2: Fizikai csoport → anyag hozzárendelés
-    std::map<int, XsMaterial::SPtr> physToXs = build_phys_xs_map(M, xsLibrary);
-    if (xsVerbosity >= 2 && !physToXs.empty())
-    {
-      std::cout << "\n[OK] Fizikai csoport → anyag hozzárendelés:\n";
-      for (std::map<int, XsMaterial::SPtr>::const_iterator it = physToXs.begin(); it != physToXs.end(); ++it)
-      {
-        const int physId = it->first;
-        const XsMaterial::SPtr &material = it->second;
-        std::cout << "  phys=" << physId << " → " << material->name << "\n";
-      }
-    }
-
-    // VALIDÁCIÓ 2: Anyag hozzárendelés ellenőrzés
-    if (control.meshOutput.getFlag("validate_material_assignment"))
-    {
-      int missingCount = 0;
-      std::vector<std::string> missingPhysGroups;
-
-      for (const auto &entry : M.physNames)
-      {
-        int physId = entry.first;
-        const std::string &physName = entry.second;
-
-        // Csak 2D fizikai csoportokat ellenőrizzük (háromszögek)
-        bool hasTriangles = false;
-        for (const auto &tri : M.tris)
+        std::cout << "\n  Peremfeltételek:\n";
+        for (std::size_t i = 0; i < xsLibrary.boundaries.size(); ++i)
         {
-          if (tri.phys == physId)
+          const XsBoundary &bound = xsLibrary.boundaries[i];
+          std::cout << "    [" << bound.name << "]\n";
+          std::cout << "      type: " << bound.type << "\n";
+        }
+      }
+
+      // Verbosity >= 2: Fizikai csoport → anyag hozzárendelés
+      std::map<int, XsMaterial::SPtr> physToXs = build_phys_xs_map(M, xsLibrary);
+      if (xsVerbosity >= 2 && !physToXs.empty())
+      {
+        std::cout << "\n[OK] Fizikai csoport → anyag hozzárendelés:\n";
+        for (std::map<int, XsMaterial::SPtr>::const_iterator it = physToXs.begin(); it != physToXs.end(); ++it)
+        {
+          const int physId = it->first;
+          const XsMaterial::SPtr &material = it->second;
+          std::cout << "  phys=" << physId << " → " << material->name << "\n";
+        }
+      }
+
+      // VALIDÁCIÓ 2: Anyag hozzárendelés ellenőrzés
+      if (control.meshOutput.getFlag("validate_material_assignment"))
+      {
+        int missingCount = 0;
+        std::vector<std::string> missingPhysGroups;
+
+        for (const auto &entry : M.physNames)
+        {
+          int physId = entry.first;
+          const std::string &physName = entry.second;
+
+          // Csak 2D fizikai csoportokat ellenőrizzük (háromszögek)
+          bool hasTriangles = false;
+          for (const auto &tri : M.tris)
           {
-            hasTriangles = true;
-            break;
+            if (tri.phys == physId)
+            {
+              hasTriangles = true;
+              break;
+            }
+          }
+
+          if (hasTriangles && physToXs.find(physId) == physToXs.end())
+          {
+            missingCount++;
+            missingPhysGroups.push_back(physName + " (id=" + std::to_string(physId) + ")");
           }
         }
 
-        if (hasTriangles && physToXs.find(physId) == physToXs.end())
+        if (missingCount > 0)
         {
-          missingCount++;
-          missingPhysGroups.push_back(physName + " (id=" + std::to_string(physId) + ")");
+          std::cout << "\n[VALIDÁCIÓS HIBA] " << missingCount
+                    << " fizikai csoportnak nincs anyag hozzárendelve!\n";
+          std::cout << "  Hiányzó anyagok:\n";
+          for (const auto &name : missingPhysGroups)
+          {
+            std::cout << "    - " << name << "\n";
+          }
+        }
+        else
+        {
+          std::cout << "\n[VALIDÁCIÓ OK] Minden 2D fizikai csoportnak van anyaga.\n";
         }
       }
 
-      if (missingCount > 0)
+      // Verbosity >= 4: Debug információk
+      if (xsVerbosity >= 4)
       {
-        std::cout << "\n[VALIDÁCIÓS HIBA] " << missingCount
-                  << " fizikai csoportnak nincs anyag hozzárendelve!\n";
-        std::cout << "  Hiányzó anyagok:\n";
-        for (const auto &name : missingPhysGroups)
-        {
-          std::cout << "    - " << name << "\n";
-        }
+        std::cout << "\n[DEBUG] XS parsing részletek:\n";
+        std::cout << "  Parsing idő: " << xsDuration.count() << " ms\n";
+        std::cout << "  Fájl méret: " << std::fixed << std::setprecision(2) << getFileSizeMB(xsPath) << " MB\n";
+        std::cout << "  Anyagok száma: " << xsLibrary.materials.size() << "\n";
+        std::cout << "  Peremfeltételek száma: " << xsLibrary.boundaries.size() << "\n";
       }
-      else
-      {
-        std::cout << "\n[VALIDÁCIÓ OK] Minden 2D fizikai csoportnak van anyaga.\n";
-      }
-    }
-
-    // Verbosity >= 4: Debug információk
-    if (xsVerbosity >= 4)
-    {
-      std::cout << "\n[DEBUG] XS parsing részletek:\n";
-      std::cout << "  Parsing idő: " << xsDuration.count() << " ms\n";
-      std::cout << "  Fájl méret: " << std::fixed << std::setprecision(2) << getFileSizeMB(xsPath) << " MB\n";
-      std::cout << "  Anyagok száma: " << xsLibrary.materials.size() << "\n";
-      std::cout << "  Peremfeltételek száma: " << xsLibrary.boundaries.size() << "\n";
-    }
     } // XS verbosity >= 1 && <= 4 vége
 
     // Verbosity == 5: CSAK debug információk
@@ -496,144 +496,147 @@ int main(int argc, char **argv)
         std::cout << "  Zóna-anyag hozzárendelések száma: " << modelLibrary.materials.size() << "\n";
       }
 
-    // Verbosity >= 2 VAGY zones flag: Zónák részletesen
-    if ((modelVerbosity >= 2 || control.modelOutput.getFlag("zones")) && !modelLibrary.zones.empty())
-    {
-      for (std::size_t i = 0; i < modelLibrary.zones.size(); ++i)
+      // Verbosity >= 2 VAGY zones flag: Zónák részletesen
+      if ((modelVerbosity >= 2 || control.modelOutput.getFlag("zones")) && !modelLibrary.zones.empty())
       {
-        const Zone &zone = modelLibrary.zones[i];
-        std::cout << "    [Zone: " << zone.name << "]\n";
-        std::cout << "      physical_groups (2D):";
-        for (std::size_t j = 0; j < zone.physicalGroups.size(); ++j)
+        for (std::size_t i = 0; i < modelLibrary.zones.size(); ++i)
         {
-          std::cout << " " << zone.physicalGroups[j];
-        }
-        std::cout << "\n";
-      }
-    }
-
-    // Verbosity >= 2 VAGY boundaries flag: Peremek részletesen
-    if (modelVerbosity >= 2 || control.modelOutput.getFlag("boundaries"))
-    {
-      for (std::size_t i = 0; i < modelLibrary.boundaries.size(); ++i)
-      {
-        const Boundary &boundary = modelLibrary.boundaries[i];
-        std::cout << "    [Boundary: " << boundary.name << "]\n";
-        std::cout << "      physical_groups (1D):";
-        for (std::size_t j = 0; j < boundary.physicalGroups.size(); ++j)
-        {
-          std::cout << " " << boundary.physicalGroups[j];
-        }
-        std::cout << "\n";
-      }
-    }
-
-    // Verbosity >= 2 VAGY mixtures flag: Keverékek részletesen
-    if (modelVerbosity >= 2 || control.modelOutput.getFlag("mixtures"))
-    {
-      for (std::size_t i = 0; i < modelLibrary.mixtures.size(); ++i)
-      {
-        const Mixture &mixture = modelLibrary.mixtures[i];
-        std::cout << "    [Mixture: " << mixture.name << "]\n";
-        std::cout << "      density: " << mixture.density << " g/cm³\n";
-
-        // Verbosity >= 3 VAGY mixture_details flag: Komponensek részletesen
-        if (modelVerbosity >= 3 || control.modelOutput.getFlag("mixture_details"))
-        {
-          std::cout << "      components:\n";
-          for (std::size_t j = 0; j < mixture.components.size(); ++j)
+          const Zone &zone = modelLibrary.zones[i];
+          std::cout << "    [Zone: " << zone.name << "]\n";
+          std::cout << "      physical_groups (2D):";
+          for (std::size_t j = 0; j < zone.physicalGroups.size(); ++j)
           {
-            const MixtureComponent &comp = mixture.components[j];
-            std::cout << "        " << comp.element << " = " << comp.atoms << "\n";
+            std::cout << " " << zone.physicalGroups[j];
           }
+          std::cout << "\n";
         }
       }
-    }
 
-    // Verbosity >= 2 VAGY materials flag: Zóna-anyag hozzárendelések
-    if ((modelVerbosity >= 2 || control.modelOutput.getFlag("materials")) && !modelLibrary.materials.empty())
-    {
-      std::cout << "\n  Zóna-anyag hozzárendelések:\n";
-      for (std::size_t i = 0; i < modelLibrary.materials.size(); ++i)
+      // Verbosity >= 2 VAGY boundaries flag: Peremek részletesen
+      if (modelVerbosity >= 2 || control.modelOutput.getFlag("boundaries"))
       {
-        const Material &mat = modelLibrary.materials[i];
-        std::cout << "    " << mat.zoneName << " → " << mat.mixtureName << "\n";
-      }
-    }
-
-    // VALIDÁCIÓ 3: Perem ellenőrzés
-    if (control.modelOutput.getFlag("validate_boundaries"))
-    {
-      int missingCount = 0;
-      std::vector<std::string> missingBoundaries;
-
-      for (const auto &boundary : modelLibrary.boundaries)
-      {
-        bool found = false;
-
-        // Ellenőrizzük, hogy a boundary minden fizikai csoportja létezik-e a mesh-ben
-        for (const auto &physGroupName : boundary.physicalGroups)
+        for (std::size_t i = 0; i < modelLibrary.boundaries.size(); ++i)
         {
-          // Keressük meg a fizikai csoport nevét a mesh-ben
-          for (const auto &meshPhys : M.physNames)
+          const Boundary &boundary = modelLibrary.boundaries[i];
+          std::cout << "    [Boundary: " << boundary.name << "]\n";
+          std::cout << "      physical_groups (1D):";
+          for (std::size_t j = 0; j < boundary.physicalGroups.size(); ++j)
           {
-            if (meshPhys.second == physGroupName)
+            std::cout << " " << boundary.physicalGroups[j];
+          }
+          std::cout << "\n";
+        }
+      }
+
+      // Verbosity >= 2 VAGY mixtures flag: Keverékek részletesen
+      if (modelVerbosity >= 2 || control.modelOutput.getFlag("mixtures"))
+      {
+        for (std::size_t i = 0; i < modelLibrary.mixtures.size(); ++i)
+        {
+          const Mixture &mixture = modelLibrary.mixtures[i];
+          std::cout << "    [Mixture: " << mixture.name << "]\n";
+          std::cout << "      density: " << mixture.density << " g/cm³\n";
+
+          // Verbosity >= 3 VAGY mixture_details flag: Komponensek részletesen
+          if (modelVerbosity >= 3 || control.modelOutput.getFlag("mixture_details"))
+          {
+            std::cout << "      components:\n";
+            for (std::size_t j = 0; j < mixture.components.size(); ++j)
             {
-              // Ellenőrizzük, hogy van-e 1D elem ezzel a fizikai ID-vel
-              for (const auto &line : M.lines)
-              {
-                if (line.phys == meshPhys.first)
-                {
-                  found = true;
-                  break;
-                }
-              }
-              if (found) break;
+              const MixtureComponent &comp = mixture.components[j];
+              std::cout << "        " << comp.element << " = " << comp.atoms << "\n";
             }
           }
-          if (found) break;
         }
+      }
 
-        if (!found)
+      // Verbosity >= 2 VAGY materials flag: Zóna-anyag hozzárendelések
+      if ((modelVerbosity >= 2 || control.modelOutput.getFlag("materials")) && !modelLibrary.materials.empty())
+      {
+        std::cout << "\n  Zóna-anyag hozzárendelések:\n";
+        for (std::size_t i = 0; i < modelLibrary.materials.size(); ++i)
         {
-          missingCount++;
-          std::string groupsList;
-          for (std::size_t i = 0; i < boundary.physicalGroups.size(); ++i)
+          const Material &mat = modelLibrary.materials[i];
+          std::cout << "    " << mat.zoneName << " → " << mat.mixtureName << "\n";
+        }
+      }
+
+      // VALIDÁCIÓ 3: Perem ellenőrzés
+      if (control.modelOutput.getFlag("validate_boundaries"))
+      {
+        int missingCount = 0;
+        std::vector<std::string> missingBoundaries;
+
+        for (const auto &boundary : modelLibrary.boundaries)
+        {
+          bool found = false;
+
+          // Ellenőrizzük, hogy a boundary minden fizikai csoportja létezik-e a mesh-ben
+          for (const auto &physGroupName : boundary.physicalGroups)
           {
-            if (i > 0) groupsList += ", ";
-            groupsList += boundary.physicalGroups[i];
+            // Keressük meg a fizikai csoport nevét a mesh-ben
+            for (const auto &meshPhys : M.physNames)
+            {
+              if (meshPhys.second == physGroupName)
+              {
+                // Ellenőrizzük, hogy van-e 1D elem ezzel a fizikai ID-vel
+                for (const auto &line : M.lines)
+                {
+                  if (line.phys == meshPhys.first)
+                  {
+                    found = true;
+                    break;
+                  }
+                }
+                if (found)
+                  break;
+              }
+            }
+            if (found)
+              break;
           }
-          missingBoundaries.push_back(boundary.name + " (csoportok: " + groupsList + ")");
-        }
-      }
 
-      if (missingCount > 0)
-      {
-        std::cout << "\n[VALIDÁCIÓS HIBA] " << missingCount
-                  << " definiált perem nem található a mesh-ben!\n";
-        std::cout << "  Hiányzó peremek:\n";
-        for (const auto &name : missingBoundaries)
+          if (!found)
+          {
+            missingCount++;
+            std::string groupsList;
+            for (std::size_t i = 0; i < boundary.physicalGroups.size(); ++i)
+            {
+              if (i > 0)
+                groupsList += ", ";
+              groupsList += boundary.physicalGroups[i];
+            }
+            missingBoundaries.push_back(boundary.name + " (csoportok: " + groupsList + ")");
+          }
+        }
+
+        if (missingCount > 0)
         {
-          std::cout << "    - " << name << "\n";
+          std::cout << "\n[VALIDÁCIÓS HIBA] " << missingCount
+                    << " definiált perem nem található a mesh-ben!\n";
+          std::cout << "  Hiányzó peremek:\n";
+          for (const auto &name : missingBoundaries)
+          {
+            std::cout << "    - " << name << "\n";
+          }
+        }
+        else
+        {
+          std::cout << "\n[VALIDÁCIÓ OK] Minden definiált perem megtalálható a mesh-ben.\n";
         }
       }
-      else
-      {
-        std::cout << "\n[VALIDÁCIÓ OK] Minden definiált perem megtalálható a mesh-ben.\n";
-      }
-    }
 
-    // Verbosity >= 4: Debug információk
-    if (modelVerbosity >= 4)
-    {
-      std::cout << "\n[DEBUG] Model parsing részletek:\n";
-      std::cout << "  Parsing idő: " << modelDuration.count() << " ms\n";
-      std::cout << "  Fájl méret: " << std::fixed << std::setprecision(2) << getFileSizeMB(modelPath) << " MB\n";
-      std::cout << "  Zónák száma: " << modelLibrary.zones.size() << "\n";
-      std::cout << "  Peremek száma: " << modelLibrary.boundaries.size() << "\n";
-      std::cout << "  Keverékek száma: " << modelLibrary.mixtures.size() << "\n";
-      std::cout << "  Anyag hozzárendelések száma: " << modelLibrary.materials.size() << "\n";
-    }
+      // Verbosity >= 4: Debug információk
+      if (modelVerbosity >= 4)
+      {
+        std::cout << "\n[DEBUG] Model parsing részletek:\n";
+        std::cout << "  Parsing idő: " << modelDuration.count() << " ms\n";
+        std::cout << "  Fájl méret: " << std::fixed << std::setprecision(2) << getFileSizeMB(modelPath) << " MB\n";
+        std::cout << "  Zónák száma: " << modelLibrary.zones.size() << "\n";
+        std::cout << "  Peremek száma: " << modelLibrary.boundaries.size() << "\n";
+        std::cout << "  Keverékek száma: " << modelLibrary.mixtures.size() << "\n";
+        std::cout << "  Anyag hozzárendelések száma: " << modelLibrary.materials.size() << "\n";
+      }
     } // Model verbosity >= 1 && <= 4 vége
 
     // Verbosity == 5: CSAK debug információk
