@@ -78,6 +78,13 @@ $EndModelOutput
 - `materials` - Zóna-anyag hozzárendelések
 - `mixture_details` - Keverék komponensek
 
+### Automatikus validációk (mindig futnak):
+
+A program automatikusan validál minden futáskor:
+- Minden háromszög fizikai csoportban van-e (mesh)
+- Minden fizikai csoportnak van-e anyaga (mesh + xs)
+- Minden definiált perem létezik-e a mesh-ben (model + mesh)
+
 ## Project Structure
 
 - `CMakeLists.txt` - CMake build configuration

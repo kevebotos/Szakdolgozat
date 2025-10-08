@@ -23,8 +23,7 @@ struct XsMaterial
 struct XsBoundary
 {
   std::string name;
-  std::string type;
-  double value = 0.0;
+  std::string type; // "vacuum" vagy "interface"
 };
 
 struct XsLibrary

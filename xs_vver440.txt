@@ -98,16 +98,12 @@ scatter = [
 
 [Boundary "Fuel-Clad"]
 type = "interface"
-value = 0.0
 
 [Boundary "Clad-Moderator"]
 type = "interface"
-value = 0.0
 
 [Boundary "Moderator-Reflector"]
 type = "interface"
-value = 0.0
 
 [Boundary "Outer-Boundary"]
 type = "vacuum"
-value = 0.0

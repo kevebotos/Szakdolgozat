@@ -328,16 +328,11 @@ void load_xs(const std::string &path, XsLibrary &library)
         {
           currentBoundary.type = value;
         }
-      }
-      else if (key == "value")
-      {
-        std::istringstream iss(value);
-        double val = 0.0;
-        if (!(iss >> val))
+        // Validáció: csak "vacuum" vagy "interface" megengedett
+        if (currentBoundary.type != "vacuum" && currentBoundary.type != "interface")
         {
-          throw_at_line(lineNo, "A value mezőnek számnak kell lennie.");
+          throw_at_line(lineNo, "A boundary type csak 'vacuum' vagy 'interface' lehet.");
         }
-        currentBoundary.value = val;
       }
       else
       {

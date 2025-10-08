@@ -1,4 +1,3 @@
-# VVER-440 Control File
 # Ez a fájl szabályozza a program kimenetét
 #
 # Verbosity szintek:
@@ -17,11 +16,7 @@ verbosity 2
 # Egyedi flag-ek (finomhangolás - csak ha verbosity >= 1)
 physical_groups off      # Fizikai csoportok kiírása (id → név)
 elements_per_group off   # Hány háromszög van melyik fizikai csoportban
-boundary_nodes off       # 1D elemekhez kapcsolódó csomópontok (verbose)
-
-# Validációs flag-ek
-validate_physical_groups on   # Ellenőrzi, hogy minden háromszög fizikai csoportban van-e
-validate_material_assignment on # Ellenőrzi, hogy minden fizikai csoportnak van-e anyaga
+boundary_nodes off       # 1D felületekhez kapcsolódó csomópontok
 $EndMeshOutput
 
 # ========== XS (KERESZTMETSZET) PARSER KONTROLL ==========
@@ -48,9 +43,6 @@ boundaries off           # Peremek listája
 mixtures off             # Keverékek listája
 materials off            # Zóna-anyag hozzárendelések
 mixture_details off      # Keverékek komponensei részletesen
-
-# Validációs flag-ek
-validate_boundaries on   # Ellenőrzi, hogy minden definiált perem létezik-e a mesh-ben
 $EndModelOutput
 
 # ========== GLOBÁLIS BEÁLLÍTÁSOK ==========
