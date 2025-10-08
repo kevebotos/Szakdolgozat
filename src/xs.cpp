@@ -1,151 +1,132 @@
 #include "xs.hpp"
 #include <fstream>
-#include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <cctype>
+#include <memory>
 
-namespace
+// levágja az elejéről/végéről a whitespace-et (CRLF esetén a '\r'-t is)
+static inline void trim_inplace(std::string &s)
 {
-  void trim_inplace(std::string &text)
+  // Távolítsuk el az elejéről a whitespace karaktereket
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
   {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())))
-    {
-      text.erase(text.begin());
-    }
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())))
-    {
-      text.pop_back();
-    }
+    s.erase(s.begin());
   }
-
-  std::string strip_comment(const std::string &line) // kommentek törlése a fileból
+  // Távolítsuk el a végéről a whitespace karaktereket (CRLF esetén a '\r'-t is)
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
   {
-    std::string result = line;
-    const std::size_t hashPos = result.find('#');
-    if (hashPos != std::string::npos)
-    {
-      result.erase(hashPos);
-    }
-    return result;
-  }
-
-  [[noreturn]] void throw_at_line(std::size_t lineNo, const std::string &message)
-  {
-    throw XsParseError(lineNo, message);
-  }
-
-  std::vector<std::string> parse_string_list(const std::string &value, std::size_t lineNo)
-  {
-    if (value.size() < 2 || value.front() != '[' || value.back() != ']')
-    {
-      throw_at_line(lineNo, "A lista formátuma hibás (hiányzó szögletes zárójelek).");
-    }
-    std::string inside = value.substr(1, value.size() - 2);
-    std::vector<std::string> result;
-    std::string token;
-    std::string current;
-    std::size_t i = 0;
-    while (i < inside.size())
-    {
-      char ch = inside[i];
-      if (ch == ',')
-      {
-        current = token;
-        trim_inplace(current);
-        if (!current.empty())
-        {
-          if (current.front() == '"' && current.back() == '"' && current.size() >= 2)
-          {
-            current = current.substr(1, current.size() - 2);
-          }
-          result.push_back(current);
-        }
-        token.clear();
-        ++i;
-        continue;
-      }
-      token.push_back(ch);
-      ++i;
-    }
-    current = token;
-    trim_inplace(current);
-    if (!current.empty())
-    {
-      if (current.front() == '"' && current.back() == '"' && current.size() >= 2)
-      {
-        current = current.substr(1, current.size() - 2);
-      }
-      result.push_back(current);
-    }
-    return result;
-  }
-
-  std::vector<double> parse_double_list(const std::string &value, std::size_t lineNo)
-  {
-    std::vector<double> numbers;
-    std::istringstream iss(value);
-    double number = 0.0;
-    while (iss >> number)
-    {
-      numbers.push_back(number);
-    }
-    if (numbers.empty())
-    {
-      throw_at_line(lineNo, "Hiányoznak a numerikus értékek.");
-    }
-    return numbers;
-  }
-
-  void expect_group_count(const std::vector<double> &values, int expected, const std::string &field, std::size_t lineNo)
-  {
-    if (expected > 0 && static_cast<int>(values.size()) != expected)
-    {
-      throw_at_line(lineNo, field + " mezőben " + std::to_string(expected) + " értéket várok.");
-    }
-  }
-
-  void expect_scatter_shape(const std::vector<std::vector<double>> &rows, int expected, std::size_t lineNo)
-  {
-    if (expected <= 0)
-    {
-      throw_at_line(lineNo, "A szórási mátrix feldolgozásához előbb a no_energy értéket kell megadni.");
-    }
-    if (static_cast<int>(rows.size()) != expected)
-    {
-      throw_at_line(lineNo, "A szórási mátrixnak " + std::to_string(expected) + " sorból kell állnia.");
-    }
-    for (std::size_t rowIndex = 0; rowIndex < rows.size(); ++rowIndex)
-    {
-      const std::vector<double> &row = rows[rowIndex];
-      if (static_cast<int>(row.size()) != expected)
-      {
-        throw_at_line(lineNo, "A szórási mátrix sorainak " + std::to_string(expected) + " elemből kell állniuk.");
-      }
-    }
-  }
-
-  void finalise_material(const XsMaterial &material, int groupCount, std::size_t lineNo) // anyag végén --> van név? minden mező csoportszáma stimmel?
-  {
-    if (material.name.empty())
-    {
-      throw_at_line(lineNo, "Hiányzik a material név.");
-    }
-    expect_group_count(material.sigma_t, groupCount, "sigma_t", lineNo);
-    expect_group_count(material.sigma_a, groupCount, "sigma_a", lineNo);
-    expect_group_count(material.nu_sigma_f, groupCount, "nu_sigma_f", lineNo);
-    expect_group_count(material.chi, groupCount, "chi", lineNo);
-    expect_scatter_shape(material.scatter, groupCount, lineNo);
+    s.pop_back();
   }
 }
 
-const XsMaterial::SPtr XsLibrary::find_material(const std::string &name) const // adott nevű anyag keresésére
+// Kommentek eltávolítása a sorból (# karakter után mindent töröl)
+static inline std::string strip_comment(const std::string &line)
+{
+  std::string result = line;
+  const std::size_t hashPos = result.find('#');
+  if (hashPos != std::string::npos)
+  {
+    result.erase(hashPos);
+  }
+  return result;
+}
+
+// Egyszerű, kezdőbarát segédfüggvények a dobásokhoz és számlálósor olvasásához
+namespace
+{
+  [[noreturn]] void throw_at_line(std::size_t currentLine, const std::string &message)
+  {
+    throw XsParseError(currentLine, message);
+  }
+
+  std::size_t read_count(std::istream &in, std::size_t &lineNo, const char *sectionToken)
+  {
+    std::string countLine;
+    const std::size_t expectedLine = lineNo + 1;
+    if (!std::getline(in, countLine))
+    {
+      throw_at_line(expectedLine, std::string("Váratlan fájlvég a(z) ") + sectionToken + " blokk elején.");
+    }
+    lineNo = expectedLine;
+    countLine = strip_comment(countLine);
+    trim_inplace(countLine);
+    if (countLine.empty())
+    {
+      throw_at_line(lineNo, std::string("Hiányzó elemszám a(z) ") + sectionToken + " blokk elején.");
+    }
+
+    std::size_t count = 0;
+    std::istringstream iss(countLine);
+    if (!(iss >> count))
+    {
+      throw_at_line(lineNo, std::string("Érvénytelen elemszám a(z) ") + sectionToken + " blokkban: \"" + countLine + "\"");
+    }
+    char extra = '\0';
+    if (iss >> extra)
+    {
+      throw_at_line(lineNo, std::string("Túl sok adat a(z) ") + sectionToken + " elemszám sorában: \"" + countLine + "\"");
+    }
+    return count;
+  }
+
+  // Vector beolvasása a sorból (pl. "1.0 2.0 3.0")
+  std::vector<double> parse_vector(const std::string &line, std::size_t lineNo, int expectedSize)
+  {
+    std::vector<double> values;
+    std::istringstream iss(line);
+    double val = 0.0;
+    while (iss >> val)
+    {
+      values.push_back(val);
+    }
+    if (expectedSize > 0 && static_cast<int>(values.size()) != expectedSize)
+    {
+      throw_at_line(lineNo, "Várt " + std::to_string(expectedSize) + " értéket, de " + std::to_string(values.size()) + " találtam.");
+    }
+    if (values.empty())
+    {
+      throw_at_line(lineNo, "Hiányzó numerikus értékek.");
+    }
+    return values;
+  }
+
+  // Kulcs-érték pár olvasása (pl. "sigma_t 1.0 2.0")
+  bool parse_key_value(const std::string &line, std::string &key, std::string &value)
+  {
+    std::size_t spacePos = line.find(' ');
+    if (spacePos == std::string::npos)
+    {
+      return false;
+    }
+    key = line.substr(0, spacePos);
+    value = line.substr(spacePos + 1);
+    trim_inplace(key);
+    trim_inplace(value);
+    return !key.empty() && !value.empty();
+  }
+}
+
+const XsMaterial::SPtr XsLibrary::find_material(const std::string &name) const
 {
   for (std::size_t i = 0; i < materials.size(); ++i)
   {
     if (materials[i].name == name)
     {
       return std::make_shared<XsMaterial>(materials[i]);
+    }
+  }
+  return nullptr;
+}
+
+const XsBoundary *XsLibrary::find_boundary(const std::string &name) const
+{
+  for (std::size_t i = 0; i < boundaries.size(); ++i)
+  {
+    if (boundaries[i].name == name)
+    {
+      return &boundaries[i];
     }
   }
   return nullptr;
@@ -159,13 +140,9 @@ void load_xs(const std::string &path, XsLibrary &library)
     throw XsError("Nem sikerült megnyitni a keresztmetszet fájlt: " + path);
   }
 
-  XsLibrary fresh;
-  std::string line;
-  std::size_t lineNo = 0;
-  bool insideMaterial = false;
-  bool insideBoundary = false;
-  XsMaterial currentMaterial;
-  XsBoundary currentBoundary;
+  XsLibrary fresh; // Ide töltjük be a kész library-t
+  std::string line; // Az aktuálisan olvasott sor
+  std::size_t lineNo = 0; // Hibaüzenethez: hanyadik sorban járunk
 
   while (std::getline(input, line))
   {
@@ -174,272 +151,311 @@ void load_xs(const std::string &path, XsLibrary &library)
     trim_inplace(cleaned);
     if (cleaned.empty())
     {
-      continue;
+      continue; // Üres sor vagy csak komment: lépjünk tovább
     }
 
-    if (cleaned.front() == '[')
+    // --- 1) XsInfo ---
+    if (cleaned == "$XsInfo")
     {
-      if (cleaned.size() < 2 || cleaned.back() != ']')
+      if (!std::getline(input, line))
       {
-        throw_at_line(lineNo, "A szekció fejléc formátuma hibás.");
+        throw_at_line(lineNo + 1, "$XsInfo blokk vége előtt elfogyott a fájl.");
       }
-      if (cleaned.compare(0, 10, "[Material ") == 0)
-      {
-        if (insideMaterial)
-        {
-          finalise_material(currentMaterial, fresh.energyGroupCount, lineNo);
-          fresh.materials.push_back(currentMaterial);
-          currentMaterial = XsMaterial();
-        }
-        if (insideBoundary)
-        {
-          fresh.boundaries.push_back(currentBoundary);
-          currentBoundary = XsBoundary();
-        }
-        const std::size_t firstQuote = cleaned.find('"');
-        const std::size_t lastQuote = cleaned.rfind('"');
-        if (firstQuote == std::string::npos || lastQuote == firstQuote)
-        {
-          throw_at_line(lineNo, "A material fejlécben idézőjelek közé kell tenni a nevet.");
-        }
-        std::string materialName = cleaned.substr(firstQuote + 1, lastQuote - firstQuote - 1);
-        if (materialName.empty())
-        {
-          throw_at_line(lineNo, "A material név nem lehet üres.");
-        }
-        for (std::size_t i = 0; i < fresh.materials.size(); ++i)
-        {
-          if (fresh.materials[i].name == materialName)
-          {
-            throw_at_line(lineNo, "A(z) " + materialName + " anyag már szerepel a fájlban.");
-          }
-        }
-        currentMaterial = XsMaterial();
-        currentMaterial.name = materialName;
-        insideMaterial = true;
-        insideBoundary = false;
-        continue;
-      }
-      else if (cleaned.compare(0, 10, "[Boundary ") == 0)
-      {
-        if (insideMaterial)
-        {
-          finalise_material(currentMaterial, fresh.energyGroupCount, lineNo);
-          fresh.materials.push_back(currentMaterial);
-          currentMaterial = XsMaterial();
-        }
-        if (insideBoundary)
-        {
-          fresh.boundaries.push_back(currentBoundary);
-          currentBoundary = XsBoundary();
-        }
-        const std::size_t firstQuote = cleaned.find('"');
-        const std::size_t lastQuote = cleaned.rfind('"');
-        if (firstQuote == std::string::npos || lastQuote == firstQuote)
-        {
-          throw_at_line(lineNo, "A boundary fejlécben idézőjelek közé kell tenni a nevet.");
-        }
-        std::string boundaryName = cleaned.substr(firstQuote + 1, lastQuote - firstQuote - 1);
-        if (boundaryName.empty())
-        {
-          throw_at_line(lineNo, "A boundary név nem lehet üres.");
-        }
-        for (std::size_t i = 0; i < fresh.boundaries.size(); ++i)
-        {
-          if (fresh.boundaries[i].name == boundaryName)
-          {
-            throw_at_line(lineNo, "A(z) " + boundaryName + " boundary már szerepel a fájlban.");
-          }
-        }
-        currentBoundary = XsBoundary();
-        currentBoundary.name = boundaryName;
-        insideBoundary = true;
-        insideMaterial = false;
-        continue;
-      }
-      else
-      {
-        throw_at_line(lineNo, "Ismeretlen fejléc: " + cleaned);
-      }
-    }
+      ++lineNo;
+      std::string titleLine = strip_comment(line);
+      trim_inplace(titleLine);
+      fresh.title = titleLine;
 
-    std::size_t equalPos = cleaned.find('=');
-    if (equalPos == std::string::npos)
-    {
-      throw_at_line(lineNo, "A sorban hiányzik az '=' jel.");
-    }
-
-    std::string key = cleaned.substr(0, equalPos);
-    std::string value = cleaned.substr(equalPos + 1);
-    trim_inplace(key);
-    trim_inplace(value);
-    if (key.empty() || value.empty())
-    {
-      throw_at_line(lineNo, "A kulcs vagy az érték üres.");
-    }
-
-    if (!insideMaterial && !insideBoundary)
-    {
-      if (key == "title")
+      // Blokk lezárása kötelező: $EndXsInfo
+      if (!std::getline(input, line))
       {
-        if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
-        {
-          fresh.title = value.substr(1, value.size() - 2);
-        }
-        else
-        {
-          fresh.title = value;
-        }
+        throw_at_line(lineNo + 1, "Hiányzik a $EndXsInfo sor.");
       }
-      else if (key == "no_energy")
+      ++lineNo;
+      std::string endLine = strip_comment(line);
+      trim_inplace(endLine);
+      if (endLine != "$EndXsInfo")
       {
-        std::istringstream iss(value);
-        int count = 0;
-        if (!(iss >> count) || count <= 0)
-        {
-          throw_at_line(lineNo, "A no_energy értékének pozitív egész számnak kell lennie.");
-        }
-        fresh.energyGroupCount = count;
-      }
-      else if (key == "energy_groups")
-      {
-        fresh.energyGroupNames = parse_string_list(value, lineNo);
-      }
-      else if (key == "materials")
-      {
-        fresh.materialOrder = parse_string_list(value, lineNo);
-      }
-      else
-      {
-        throw_at_line(lineNo, "Ismeretlen globális kulcs: " + key);
+        throw_at_line(lineNo, "A $XsInfo blokkot $EndXsInfo sorral kell zárni.");
       }
       continue;
     }
 
-    if (insideBoundary)
+    // --- 2) EnergyGroups ---
+    if (cleaned == "$EnergyGroups")
     {
-      if (key == "type")
+      const std::size_t groupCount = read_count(input, lineNo, "$EnergyGroups");
+      fresh.energyGroupCount = static_cast<int>(groupCount);
+
+      // Energia csoport nevek beolvasása (opcionális, de ha van, akkor pontosan groupCount darab)
+      for (std::size_t i = 0; i < groupCount; ++i)
       {
-        if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
+        if (!std::getline(input, line))
         {
-          currentBoundary.type = value.substr(1, value.size() - 2);
+          throw_at_line(lineNo + 1, "$EnergyGroups blokk vége előtt elfogyott a fájl.");
         }
-        else
+        ++lineNo;
+        std::string groupName = strip_comment(line);
+        trim_inplace(groupName);
+        if (groupName.empty())
         {
-          currentBoundary.type = value;
+          throw_at_line(lineNo, "$EnergyGroups sor üres.");
         }
+        fresh.energyGroupNames.push_back(groupName);
+      }
+
+      // Blokk lezárása kötelező: $EndEnergyGroups
+      if (!std::getline(input, line))
+      {
+        throw_at_line(lineNo + 1, "Hiányzik a $EndEnergyGroups sor.");
+      }
+      ++lineNo;
+      std::string endLine = strip_comment(line);
+      trim_inplace(endLine);
+      if (endLine != "$EndEnergyGroups")
+      {
+        throw_at_line(lineNo, "A $EnergyGroups blokkot $EndEnergyGroups sorral kell zárni.");
+      }
+      continue;
+    }
+
+    // --- 3) Materials ---
+    if (cleaned == "$Materials")
+    {
+      const std::size_t materialCount = read_count(input, lineNo, "$Materials");
+
+      std::size_t materialsRead = 0;
+      while (materialsRead < materialCount)
+      {
+        // Material név olvasása (üres sorokat átugorjuk)
+        std::string matLine;
+        while (true)
+        {
+          if (!std::getline(input, line))
+          {
+            throw_at_line(lineNo + 1, "$Materials blokk vége előtt elfogyott a fájl.");
+          }
+          ++lineNo;
+          matLine = strip_comment(line);
+          trim_inplace(matLine);
+          if (!matLine.empty())
+          {
+            break; // Nem üres sort találtunk
+          }
+        }
+
+        XsMaterial mat;
+        mat.name = matLine;
+
+        // Ellenőrizzük, hogy nincs-e duplikált material név
+        if (fresh.find_material(mat.name) != nullptr)
+        {
+          throw_at_line(lineNo, "Ez a material név már szerepelt: " + mat.name);
+        }
+
+        // sigma_t olvasása
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzó sigma_t sor a(z) " + mat.name + " materialhoz.");
+        }
+        ++lineNo;
+        std::string sigmaLine = strip_comment(line);
+        trim_inplace(sigmaLine);
+        std::string key, value;
+        if (!parse_key_value(sigmaLine, key, value) || key != "sigma_t")
+        {
+          throw_at_line(lineNo, "Várt 'sigma_t' sort a(z) " + mat.name + " materialhoz.");
+        }
+        mat.sigma_t = parse_vector(value, lineNo, fresh.energyGroupCount);
+
+        // sigma_a olvasása
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzó sigma_a sor a(z) " + mat.name + " materialhoz.");
+        }
+        ++lineNo;
+        sigmaLine = strip_comment(line);
+        trim_inplace(sigmaLine);
+        if (!parse_key_value(sigmaLine, key, value) || key != "sigma_a")
+        {
+          throw_at_line(lineNo, "Várt 'sigma_a' sort a(z) " + mat.name + " materialhoz.");
+        }
+        mat.sigma_a = parse_vector(value, lineNo, fresh.energyGroupCount);
+
+        // nu_sigma_f olvasása
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzó nu_sigma_f sor a(z) " + mat.name + " materialhoz.");
+        }
+        ++lineNo;
+        sigmaLine = strip_comment(line);
+        trim_inplace(sigmaLine);
+        if (!parse_key_value(sigmaLine, key, value) || key != "nu_sigma_f")
+        {
+          throw_at_line(lineNo, "Várt 'nu_sigma_f' sort a(z) " + mat.name + " materialhoz.");
+        }
+        mat.nu_sigma_f = parse_vector(value, lineNo, fresh.energyGroupCount);
+
+        // chi olvasása
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzó chi sor a(z) " + mat.name + " materialhoz.");
+        }
+        ++lineNo;
+        sigmaLine = strip_comment(line);
+        trim_inplace(sigmaLine);
+        if (!parse_key_value(sigmaLine, key, value) || key != "chi")
+        {
+          throw_at_line(lineNo, "Várt 'chi' sort a(z) " + mat.name + " materialhoz.");
+        }
+        mat.chi = parse_vector(value, lineNo, fresh.energyGroupCount);
+
+        // $Scatter blokk olvasása
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzó $Scatter blokk a(z) " + mat.name + " materialhoz.");
+        }
+        ++lineNo;
+        std::string scatterStart = strip_comment(line);
+        trim_inplace(scatterStart);
+        if (scatterStart != "$Scatter")
+        {
+          throw_at_line(lineNo, "Várt '$Scatter' sort a(z) " + mat.name + " materialhoz.");
+        }
+
+        // Scatter mátrix sorai (energyGroupCount db sor kell)
+        std::vector<std::vector<double>> scatterMatrix;
+        for (int row = 0; row < fresh.energyGroupCount; ++row)
+        {
+          if (!std::getline(input, line))
+          {
+            throw_at_line(lineNo + 1, "$Scatter blokk vége előtt elfogyott a fájl.");
+          }
+          ++lineNo;
+          std::string rowLine = strip_comment(line);
+          trim_inplace(rowLine);
+          if (rowLine.empty())
+          {
+            throw_at_line(lineNo, "$Scatter mátrix sor üres.");
+          }
+          std::vector<double> rowValues = parse_vector(rowLine, lineNo, fresh.energyGroupCount);
+          scatterMatrix.push_back(rowValues);
+        }
+        mat.scatter = scatterMatrix;
+
+        // $EndScatter olvasása
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzik a $EndScatter sor.");
+        }
+        ++lineNo;
+        std::string scatterEnd = strip_comment(line);
+        trim_inplace(scatterEnd);
+        if (scatterEnd != "$EndScatter")
+        {
+          throw_at_line(lineNo, "A $Scatter blokkot $EndScatter sorral kell zárni.");
+        }
+
+        fresh.materials.push_back(mat);
+        ++materialsRead;
+      }
+
+      // Blokk lezárása kötelező: $EndMaterials (üres sorokat átugorjuk)
+      while (true)
+      {
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "Hiányzik a $EndMaterials sor.");
+        }
+        ++lineNo;
+        std::string endLine = strip_comment(line);
+        trim_inplace(endLine);
+        if (endLine.empty())
+        {
+          continue; // Üres sor, próbáljuk újra
+        }
+        if (endLine != "$EndMaterials")
+        {
+          throw_at_line(lineNo, "A $Materials blokkot $EndMaterials sorral kell zárni.");
+        }
+        break; // Megvan az $EndMaterials
+      }
+      continue;
+    }
+
+    // --- 4) Boundaries ---
+    if (cleaned == "$Boundaries")
+    {
+      const std::size_t boundaryCount = read_count(input, lineNo, "$Boundaries");
+      for (std::size_t i = 0; i < boundaryCount; ++i)
+      {
+        if (!std::getline(input, line))
+        {
+          throw_at_line(lineNo + 1, "$Boundaries blokk vége előtt elfogyott a fájl.");
+        }
+        ++lineNo;
+        std::string boundLine = strip_comment(line);
+        trim_inplace(boundLine);
+        if (boundLine.empty())
+        {
+          throw_at_line(lineNo, "$Boundaries sor üres.");
+        }
+
+        // Formátum: BoundaryName type
+        std::istringstream iss(boundLine);
+        std::string boundName, boundType;
+        if (!(iss >> boundName >> boundType))
+        {
+          throw_at_line(lineNo, "Nem tudom kiolvasni a boundary nevet és típust ebből a sorból: \"" + boundLine + "\"");
+        }
+
+        // Ellenőrizzük, hogy nincs-e extra adat
+        std::string extra;
+        if (iss >> extra)
+        {
+          throw_at_line(lineNo, "Túl sok adat a boundary sorban: \"" + boundLine + "\"");
+        }
+
         // Validáció: csak "vacuum" vagy "interface" megengedett
-        if (currentBoundary.type != "vacuum" && currentBoundary.type != "interface")
+        if (boundType != "vacuum" && boundType != "interface")
         {
           throw_at_line(lineNo, "A boundary type csak 'vacuum' vagy 'interface' lehet.");
         }
+
+        // Ellenőrizzük, hogy nincs-e duplikált boundary név
+        if (fresh.find_boundary(boundName) != nullptr)
+        {
+          throw_at_line(lineNo, "Ez a boundary név már szerepelt: " + boundName);
+        }
+
+        XsBoundary boundary;
+        boundary.name = boundName;
+        boundary.type = boundType;
+        fresh.boundaries.push_back(boundary);
       }
-      else
+
+      // Blokk lezárása kötelező: $EndBoundaries
+      if (!std::getline(input, line))
       {
-        throw_at_line(lineNo, "Ismeretlen kulcs a boundary blokkjában: " + key);
+        throw_at_line(lineNo + 1, "Hiányzik a $EndBoundaries sor.");
+      }
+      ++lineNo;
+      std::string endLine = strip_comment(line);
+      trim_inplace(endLine);
+      if (endLine != "$EndBoundaries")
+      {
+        throw_at_line(lineNo, "A $Boundaries blokkot $EndBoundaries sorral kell zárni.");
       }
       continue;
     }
-
-    if (key == "sigma_t")
-    {
-      std::vector<double> values = parse_double_list(value, lineNo);
-      expect_group_count(values, fresh.energyGroupCount, key, lineNo);
-      currentMaterial.sigma_t = values;
-    }
-    else if (key == "sigma_a")
-    {
-      std::vector<double> values = parse_double_list(value, lineNo);
-      expect_group_count(values, fresh.energyGroupCount, key, lineNo);
-      currentMaterial.sigma_a = values;
-    }
-    else if (key == "nu_sigma_f")
-    {
-      std::vector<double> values = parse_double_list(value, lineNo);
-      expect_group_count(values, fresh.energyGroupCount, key, lineNo);
-      currentMaterial.nu_sigma_f = values;
-    }
-    else if (key == "chi")
-    {
-      std::vector<double> values = parse_double_list(value, lineNo);
-      expect_group_count(values, fresh.energyGroupCount, key, lineNo);
-      currentMaterial.chi = values;
-    }
-    else if (key == "scatter")
-    {
-      if (value != "[")
-      {
-        throw_at_line(lineNo, "A scatter blokkot '[' jellel kell indítani.");
-      }
-      if (fresh.energyGroupCount <= 0)
-      {
-        throw_at_line(lineNo, "A scatter blokk előtt meg kell adni a no_energy értéket.");
-      }
-      std::vector<std::vector<double>> rows;
-      while (std::getline(input, line))
-      {
-        ++lineNo;
-        std::string rowLine = strip_comment(line);
-        trim_inplace(rowLine);
-        if (rowLine.empty())
-        {
-          continue;
-        }
-        if (rowLine == "]")
-        {
-          break;
-        }
-        std::vector<double> rowValues = parse_double_list(rowLine, lineNo);
-        if (static_cast<int>(rowValues.size()) != fresh.energyGroupCount)
-        {
-          throw_at_line(lineNo, "A szórási mátrix soraihoz " + std::to_string(fresh.energyGroupCount) + " értéket várok.");
-        }
-        rows.push_back(rowValues);
-      }
-      if (rows.empty())
-      {
-        throw_at_line(lineNo, "A szórási mátrix nem lehet üres.");
-      }
-      currentMaterial.scatter = rows;
-    }
-    else
-    {
-      throw_at_line(lineNo, "Ismeretlen kulcs az anyag blokkjában: " + key);
-    }
   }
 
-  if (insideMaterial)
-  {
-    finalise_material(currentMaterial, fresh.energyGroupCount, lineNo == 0 ? 1 : lineNo);
-    fresh.materials.push_back(currentMaterial);
-  }
-
-  if (insideBoundary)
-  {
-    fresh.boundaries.push_back(currentBoundary);
-  }
-
+  // Validációk
   if (fresh.energyGroupCount <= 0)
   {
-    throw XsError("A fájl nem tartalmaz no_energy bejegyzést.");
+    throw XsError("A fájl nem tartalmaz $EnergyGroups blokkot vagy az energia csoportok száma 0.");
   }
 
-  if (!fresh.energyGroupNames.empty() && static_cast<int>(fresh.energyGroupNames.size()) != fresh.energyGroupCount)
-  {
-    throw XsError("Az energy_groups lista hossza nem egyezik a no_energy értékével.");
-  }
-
-  if (!fresh.materialOrder.empty())
-  {
-    for (std::size_t i = 0; i < fresh.materialOrder.size(); ++i)
-    {
-      const std::string &name = fresh.materialOrder[i];
-      if (fresh.find_material(name) == nullptr)
-      {
-        throw XsError("A materials listában szereplő anyag hiányzik: " + name);
-      }
-    }
-  }
-
+  // Sikeres betöltés után átmásoljuk az eredményt
   library = fresh;
 }

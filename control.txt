@@ -38,7 +38,7 @@ $ModelOutput
 verbosity 5
 
 # Egyedi flag-ek (finomhangolás - csak ha verbosity >= 1)
-zones off                # Zónák listája
+zones off                 # Zónák listája
 boundaries off           # Peremek listája
 mixtures off             # Keverékek listája
 materials off            # Zóna-anyag hozzárendelések
@@ -48,7 +48,7 @@ $EndModelOutput
 # ========== GLOBÁLIS BEÁLLÍTÁSOK ==========
 $GlobalOutput
 # Ha be van állítva (>=0), akkor felülírja az összes parser verbosity-ját
-master_verbosity 5
+master_verbosity 0
 
 # Kimenet formátuma (jelenleg csak 'plain' támogatott)
 format plain

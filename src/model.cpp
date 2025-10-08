@@ -1,37 +1,43 @@
 #include "model.hpp"
 #include <fstream>
 #include <sstream>
-#include <cctype>
+#include <string>
 #include <vector>
+#include <cctype>
 
+// levágja az elejéről/végéről a whitespace-et (CRLF esetén a '\r'-t is)
+static inline void trim_inplace(std::string &s)
+{
+  // Távolítsuk el az elejéről a whitespace karaktereket
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
+  {
+    s.erase(s.begin());
+  }
+  // Távolítsuk el a végéről a whitespace karaktereket (CRLF esetén a '\r'-t is)
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
+  {
+    s.pop_back();
+  }
+}
+
+// Kommentek eltávolítása a sorból (# karakter után mindent töröl)
+static inline std::string strip_comment(const std::string &line)
+{
+  std::string result = line;
+  const std::size_t hashPos = result.find('#');
+  if (hashPos != std::string::npos)
+  {
+    result.erase(hashPos);
+  }
+  return result;
+}
+
+// Egyszerű, kezdőbarát segédfüggvények a dobásokhoz és számlálósor olvasásához
 namespace
 {
-  void trim_inplace(std::string &text)
+  [[noreturn]] void throw_at_line(std::size_t currentLine, const std::string &message)
   {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())))
-    {
-      text.erase(text.begin());
-    }
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())))
-    {
-      text.pop_back();
-    }
-  }
-
-  std::string strip_comment(const std::string &line) // kommentek törlése a fileból
-  {
-    std::string result = line;
-    const std::size_t hashPos = result.find('#');
-    if (hashPos != std::string::npos)
-    {
-      result.erase(hashPos);
-    }
-    return result;
-  }
-
-  [[noreturn]] void throw_at_line(std::size_t lineNo, const std::string &message)
-  {
-    throw ModelParseError(lineNo, message);
+    throw ModelParseError(currentLine, message);
   }
 
   std::size_t read_count(std::istream &in, std::size_t &lineNo, const char *sectionToken)
@@ -62,44 +68,6 @@ namespace
       throw_at_line(lineNo, std::string("Túl sok adat a(z) ") + sectionToken + " elemszám sorában: \"" + countLine + "\"");
     }
     return count;
-  }
-
-  // Idézőjelezett string kinyerése a sorból
-  std::string extract_quoted_string(const std::string &text, std::size_t &pos, std::size_t lineNo)
-  {
-    if (pos >= text.size() || text[pos] != '"')
-    {
-      throw_at_line(lineNo, "Hiányzó idézőjel a stringnél.");
-    }
-    ++pos; // nyitó " átugrása
-    std::string result;
-    while (pos < text.size() && text[pos] != '"')
-    {
-      result += text[pos];
-      ++pos;
-    }
-    if (pos >= text.size())
-    {
-      throw_at_line(lineNo, "Hiányzó záró idézőjel.");
-    }
-    ++pos; // záró " átugrása
-    return result;
-  }
-
-  // Következő nem-whitespace token kinyerése
-  std::string extract_token(const std::string &text, std::size_t &pos)
-  {
-    while (pos < text.size() && std::isspace(static_cast<unsigned char>(text[pos])))
-    {
-      ++pos;
-    }
-    std::string result;
-    while (pos < text.size() && !std::isspace(static_cast<unsigned char>(text[pos])))
-    {
-      result += text[pos];
-      ++pos;
-    }
-    return result;
   }
 }
 
@@ -147,9 +115,9 @@ void loadModel(const std::string &path, ModelLibrary &model)
     throw ModelError("Nem sikerült megnyitni a model fájlt: " + path);
   }
 
-  ModelLibrary fresh;
-  std::string line;
-  std::size_t lineNo = 0;
+  ModelLibrary fresh; // Ide töltjük be a kész modelt
+  std::string line;   // Az aktuálisan olvasott sor
+  std::size_t lineNo = 0; // Hibaüzenethez: hanyadik sorban járunk
 
   while (std::getline(input, line))
   {
@@ -158,36 +126,37 @@ void loadModel(const std::string &path, ModelLibrary &model)
     trim_inplace(cleaned);
     if (cleaned.empty())
     {
-      continue;
+      continue; // Üres sor vagy csak komment: lépjünk tovább
     }
 
-    // --- ModelInfo ---
+    // --- 1) ModelInfo ---
     if (cleaned == "$ModelInfo")
     {
       if (!std::getline(input, line))
       {
-        throw_at_line(lineNo + 1, "Váratlan fájlvég a $ModelInfo blokkban.");
+        throw_at_line(lineNo + 1, "$ModelInfo blokk vége előtt elfogyott a fájl.");
       }
       ++lineNo;
       std::string titleLine = strip_comment(line);
       trim_inplace(titleLine);
       fresh.title = titleLine;
 
+      // Blokk lezárása kötelező: $EndModelInfo
       if (!std::getline(input, line))
       {
-        throw_at_line(lineNo + 1, "Hiányzó $EndModelInfo.");
+        throw_at_line(lineNo + 1, "Hiányzik a $EndModelInfo sor.");
       }
       ++lineNo;
       std::string endLine = strip_comment(line);
       trim_inplace(endLine);
       if (endLine != "$EndModelInfo")
       {
-        throw_at_line(lineNo, "Várt $EndModelInfo, kapott: " + endLine);
+        throw_at_line(lineNo, "A $ModelInfo blokkot $EndModelInfo sorral kell zárni.");
       }
       continue;
     }
 
-    // --- Zones ---
+    // --- 2) Zones ---
     if (cleaned == "$Zones")
     {
       const std::size_t zoneCount = read_count(input, lineNo, "$Zones");
@@ -195,85 +164,77 @@ void loadModel(const std::string &path, ModelLibrary &model)
       {
         if (!std::getline(input, line))
         {
-          throw_at_line(lineNo + 1, "Váratlan fájlvég a $Zones blokkban.");
+          throw_at_line(lineNo + 1, "$Zones blokk vége előtt elfogyott a fájl.");
         }
         ++lineNo;
         std::string zoneLine = strip_comment(line);
         trim_inplace(zoneLine);
         if (zoneLine.empty())
         {
-          throw_at_line(lineNo, "Üres sor a $Zones blokkban.");
+          throw_at_line(lineNo, "$Zones sor üres.");
         }
 
-        // Formátum: név "physGroup1" ["physGroup2" ...] "leírás"
-        std::size_t pos = 0;
-        std::string zoneName = extract_token(zoneLine, pos);
-        if (zoneName.empty())
+        // Formátum: ZoneName physGroupCount physGroup1 physGroup2 ...
+        std::istringstream iss(zoneLine);
+        std::string zoneName;
+        int physGroupCount = 0;
+
+        if (!(iss >> zoneName >> physGroupCount))
         {
-          throw_at_line(lineNo, "Hiányzó zone név.");
+          throw_at_line(lineNo, "Nem tudom kiolvasni a zone nevet és physGroupCount-ot ebből a sorból: \"" + zoneLine + "\"");
+        }
+        if (physGroupCount <= 0)
+        {
+          throw_at_line(lineNo, "A physGroupCount-nak pozitívnak kell lennie: " + std::to_string(physGroupCount));
         }
 
-        // Beolvassuk az összes physical group-ot (legalább 1 kell)
+        // Physical group nevek beolvasása
         std::vector<std::string> physGroups;
-        while (pos < zoneLine.size())
+        for (int pg = 0; pg < physGroupCount; ++pg)
         {
-          while (pos < zoneLine.size() && std::isspace(static_cast<unsigned char>(zoneLine[pos])))
+          std::string physGroup;
+          if (!(iss >> physGroup))
           {
-            ++pos;
+            throw_at_line(lineNo, "Hiányzik a(z) " + std::to_string(pg + 1) + ". physical group név.");
           }
-          if (pos >= zoneLine.size())
-          {
-            break;
-          }
-
-          // Ha idézőjel, akkor physical group vagy description
-          if (zoneLine[pos] == '"')
-          {
-            std::string quoted = extract_quoted_string(zoneLine, pos, lineNo);
-            physGroups.push_back(quoted);
-          }
-          else
-          {
-            break;
-          }
+          physGroups.push_back(physGroup);
         }
 
-        if (physGroups.empty())
+        // Ellenőrizzük, hogy nincs-e extra adat
+        std::string extra;
+        if (iss >> extra)
         {
-          throw_at_line(lineNo, "Legalább egy physical group szükséges.");
+          throw_at_line(lineNo, "Túl sok adat a zone sorban: \"" + zoneLine + "\"");
         }
 
-        // Az utolsó quoted string a description
-        std::string description = physGroups.back();
-        physGroups.pop_back();
-
-        if (physGroups.empty())
+        // Ellenőrizzük, hogy nincs-e duplikált zone név
+        if (fresh.findZone(zoneName) != nullptr)
         {
-          throw_at_line(lineNo, "Legalább egy physical group szükséges a description mellett.");
+          throw_at_line(lineNo, "Ez a zone név már szerepelt: " + zoneName);
         }
 
         Zone zone;
         zone.name = zoneName;
         zone.physicalGroups = physGroups;
-        zone.description = description;
         fresh.zones.push_back(zone);
       }
 
+      // Blokk lezárása kötelező: $EndZones
       if (!std::getline(input, line))
       {
-        throw_at_line(lineNo + 1, "Hiányzó $EndZones.");
+        throw_at_line(lineNo + 1, "Hiányzik a $EndZones sor.");
       }
       ++lineNo;
       std::string endLine = strip_comment(line);
       trim_inplace(endLine);
       if (endLine != "$EndZones")
       {
-        throw_at_line(lineNo, "Várt $EndZones, kapott: " + endLine);
+        throw_at_line(lineNo, "A $Zones blokkot $EndZones sorral kell zárni.");
       }
       continue;
     }
 
-    // --- Boundaries ---
+    // --- 3) Boundaries ---
     if (cleaned == "$Boundaries")
     {
       const std::size_t boundaryCount = read_count(input, lineNo, "$Boundaries");
@@ -281,85 +242,77 @@ void loadModel(const std::string &path, ModelLibrary &model)
       {
         if (!std::getline(input, line))
         {
-          throw_at_line(lineNo + 1, "Váratlan fájlvég a $Boundaries blokkban.");
+          throw_at_line(lineNo + 1, "$Boundaries blokk vége előtt elfogyott a fájl.");
         }
         ++lineNo;
         std::string boundLine = strip_comment(line);
         trim_inplace(boundLine);
         if (boundLine.empty())
         {
-          throw_at_line(lineNo, "Üres sor a $Boundaries blokkban.");
+          throw_at_line(lineNo, "$Boundaries sor üres.");
         }
 
-        // Formátum: név "physGroup1" ["physGroup2" ...] "leírás"
-        std::size_t pos = 0;
-        std::string boundName = extract_token(boundLine, pos);
-        if (boundName.empty())
+        // Formátum: BoundaryName physGroupCount physGroup1 physGroup2 ...
+        std::istringstream iss(boundLine);
+        std::string boundName;
+        int physGroupCount = 0;
+
+        if (!(iss >> boundName >> physGroupCount))
         {
-          throw_at_line(lineNo, "Hiányzó boundary név.");
+          throw_at_line(lineNo, "Nem tudom kiolvasni a boundary nevet és physGroupCount-ot ebből a sorból: \"" + boundLine + "\"");
+        }
+        if (physGroupCount <= 0)
+        {
+          throw_at_line(lineNo, "A physGroupCount-nak pozitívnak kell lennie: " + std::to_string(physGroupCount));
         }
 
-        // Beolvassuk az összes physical group-ot (legalább 1 kell)
+        // Physical group nevek beolvasása
         std::vector<std::string> physGroups;
-        while (pos < boundLine.size())
+        for (int pg = 0; pg < physGroupCount; ++pg)
         {
-          while (pos < boundLine.size() && std::isspace(static_cast<unsigned char>(boundLine[pos])))
+          std::string physGroup;
+          if (!(iss >> physGroup))
           {
-            ++pos;
+            throw_at_line(lineNo, "Hiányzik a(z) " + std::to_string(pg + 1) + ". physical group név.");
           }
-          if (pos >= boundLine.size())
-          {
-            break;
-          }
-
-          // Ha idézőjel, akkor physical group vagy description
-          if (boundLine[pos] == '"')
-          {
-            std::string quoted = extract_quoted_string(boundLine, pos, lineNo);
-            physGroups.push_back(quoted);
-          }
-          else
-          {
-            break;
-          }
+          physGroups.push_back(physGroup);
         }
 
-        if (physGroups.empty())
+        // Ellenőrizzük, hogy nincs-e extra adat
+        std::string extra;
+        if (iss >> extra)
         {
-          throw_at_line(lineNo, "Legalább egy physical group szükséges.");
+          throw_at_line(lineNo, "Túl sok adat a boundary sorban: \"" + boundLine + "\"");
         }
 
-        // Az utolsó quoted string a description
-        std::string description = physGroups.back();
-        physGroups.pop_back();
-
-        if (physGroups.empty())
+        // Ellenőrizzük, hogy nincs-e duplikált boundary név
+        if (fresh.findBoundary(boundName) != nullptr)
         {
-          throw_at_line(lineNo, "Legalább egy physical group szükséges a description mellett.");
+          throw_at_line(lineNo, "Ez a boundary név már szerepelt: " + boundName);
         }
 
         Boundary boundary;
         boundary.name = boundName;
         boundary.physicalGroups = physGroups;
-        boundary.description = description;
         fresh.boundaries.push_back(boundary);
       }
 
+      // Blokk lezárása kötelező: $EndBoundaries
       if (!std::getline(input, line))
       {
-        throw_at_line(lineNo + 1, "Hiányzó $EndBoundaries.");
+        throw_at_line(lineNo + 1, "Hiányzik a $EndBoundaries sor.");
       }
       ++lineNo;
       std::string endLine = strip_comment(line);
       trim_inplace(endLine);
       if (endLine != "$EndBoundaries")
       {
-        throw_at_line(lineNo, "Várt $EndBoundaries, kapott: " + endLine);
+        throw_at_line(lineNo, "A $Boundaries blokkot $EndBoundaries sorral kell zárni.");
       }
       continue;
     }
 
-    // --- Mixtures ---
+    // --- 4) Mixtures ---
     if (cleaned == "$Mixtures")
     {
       const std::size_t mixtureCount = read_count(input, lineNo, "$Mixtures");
@@ -367,114 +320,92 @@ void loadModel(const std::string &path, ModelLibrary &model)
       {
         if (!std::getline(input, line))
         {
-          throw_at_line(lineNo + 1, "Váratlan fájlvég a $Mixtures blokkban.");
+          throw_at_line(lineNo + 1, "$Mixtures blokk vége előtt elfogyott a fájl.");
         }
         ++lineNo;
         std::string mixLine = strip_comment(line);
         trim_inplace(mixLine);
         if (mixLine.empty())
         {
-          throw_at_line(lineNo, "Üres sor a $Mixtures blokkban.");
+          throw_at_line(lineNo, "$Mixtures sor üres.");
         }
 
-        // Formátum: név sűrűség "leírás" komponensszám elem1 atom1 elem2 atom2 ...
+        // Formátum: MixtureName density componentCount elem1 atoms1 elem2 atoms2 ...
         std::istringstream iss(mixLine);
         std::string mixName;
         double density = 0.0;
-        if (!(iss >> mixName >> density))
-        {
-          throw_at_line(lineNo, "Hibás mixture formátum (név vagy sűrűség).");
-        }
+        int componentCount = 0;
 
-        // Leírás beolvasása idézőjelek között
-        std::string remainder;
-        std::getline(iss, remainder);
-        trim_inplace(remainder);
-        std::size_t pos = 0;
-        while (pos < remainder.size() && std::isspace(static_cast<unsigned char>(remainder[pos])))
+        if (!(iss >> mixName >> density >> componentCount))
         {
-          ++pos;
+          throw_at_line(lineNo, "Nem tudom kiolvasni a mixture nevet, density-t és componentCount-ot ebből a sorból: \"" + mixLine + "\"");
         }
-        std::string description = extract_quoted_string(remainder, pos, lineNo);
-
-        // Komponensszám
-        while (pos < remainder.size() && std::isspace(static_cast<unsigned char>(remainder[pos])))
+        if (density <= 0.0)
         {
-          ++pos;
+          throw_at_line(lineNo, "A density-nek pozitívnak kell lennie: " + std::to_string(density));
         }
-        std::size_t compCountStart = pos;
-        while (pos < remainder.size() && !std::isspace(static_cast<unsigned char>(remainder[pos])))
+        if (componentCount <= 0)
         {
-          ++pos;
-        }
-        std::string compCountStr = remainder.substr(compCountStart, pos - compCountStart);
-        int compCount = 0;
-        std::istringstream compIss(compCountStr);
-        if (!(compIss >> compCount) || compCount <= 0)
-        {
-          throw_at_line(lineNo, "Hibás komponensszám.");
+          throw_at_line(lineNo, "A componentCount-nak pozitívnak kell lennie: " + std::to_string(componentCount));
         }
 
         // Komponensek beolvasása
         std::vector<MixtureComponent> components;
-        for (int c = 0; c < compCount; ++c)
+        for (int c = 0; c < componentCount; ++c)
         {
-          while (pos < remainder.size() && std::isspace(static_cast<unsigned char>(remainder[pos])))
-          {
-            ++pos;
-          }
-          std::string elem = extract_token(remainder, pos);
-          if (elem.empty())
-          {
-            throw_at_line(lineNo, "Hiányzó elem név a komponensben.");
-          }
-
-          while (pos < remainder.size() && std::isspace(static_cast<unsigned char>(remainder[pos])))
-          {
-            ++pos;
-          }
-          std::string atomsStr = extract_token(remainder, pos);
-          if (atomsStr.empty())
-          {
-            throw_at_line(lineNo, "Hiányzó atom szám a komponensben.");
-          }
-
+          std::string element;
           double atoms = 0.0;
-          std::istringstream atomIss(atomsStr);
-          if (!(atomIss >> atoms))
+          if (!(iss >> element >> atoms))
           {
-            throw_at_line(lineNo, "Hibás atom szám: " + atomsStr);
+            throw_at_line(lineNo, "Hiányzik a(z) " + std::to_string(c + 1) + ". komponens elem neve vagy atom száma.");
+          }
+          if (atoms <= 0.0)
+          {
+            throw_at_line(lineNo, "Az atom számnak pozitívnak kell lennie: " + std::to_string(atoms));
           }
 
           MixtureComponent comp;
-          comp.element = elem;
+          comp.element = element;
           comp.atoms = atoms;
           components.push_back(comp);
+        }
+
+        // Ellenőrizzük, hogy nincs-e extra adat
+        std::string extra;
+        if (iss >> extra)
+        {
+          throw_at_line(lineNo, "Túl sok adat a mixture sorban: \"" + mixLine + "\"");
+        }
+
+        // Ellenőrizzük, hogy nincs-e duplikált mixture név
+        if (fresh.findMixture(mixName) != nullptr)
+        {
+          throw_at_line(lineNo, "Ez a mixture név már szerepelt: " + mixName);
         }
 
         Mixture mixture;
         mixture.name = mixName;
         mixture.density = density;
-        mixture.description = description;
         mixture.components = components;
         fresh.mixtures.push_back(mixture);
       }
 
+      // Blokk lezárása kötelező: $EndMixtures
       if (!std::getline(input, line))
       {
-        throw_at_line(lineNo + 1, "Hiányzó $EndMixtures.");
+        throw_at_line(lineNo + 1, "Hiányzik a $EndMixtures sor.");
       }
       ++lineNo;
       std::string endLine = strip_comment(line);
       trim_inplace(endLine);
       if (endLine != "$EndMixtures")
       {
-        throw_at_line(lineNo, "Várt $EndMixtures, kapott: " + endLine);
+        throw_at_line(lineNo, "A $Mixtures blokkot $EndMixtures sorral kell zárni.");
       }
       continue;
     }
 
-    // --- Materials ---
+    // --- 5) Materials ---
     if (cleaned == "$Materials")
     {
       const std::size_t materialCount = read_count(input, lineNo, "$Materials");
@@ -482,14 +413,14 @@ void loadModel(const std::string &path, ModelLibrary &model)
       {
         if (!std::getline(input, line))
         {
-          throw_at_line(lineNo + 1, "Váratlan fájlvég a $Materials blokkban.");
+          throw_at_line(lineNo + 1, "$Materials blokk vége előtt elfogyott a fájl.");
         }
         ++lineNo;
         std::string matLine = strip_comment(line);
         trim_inplace(matLine);
         if (matLine.empty())
         {
-          throw_at_line(lineNo, "Üres sor a $Materials blokkban.");
+          throw_at_line(lineNo, "$Materials sor üres.");
         }
 
         // Formátum: ZoneName MixtureName
@@ -497,10 +428,10 @@ void loadModel(const std::string &path, ModelLibrary &model)
         std::string zoneName, mixtureName;
         if (!(iss >> zoneName >> mixtureName))
         {
-          throw_at_line(lineNo, "Hibás material formátum. Várt: ZoneName MixtureName");
+          throw_at_line(lineNo, "Nem tudom kiolvasni a zone és mixture nevet ebből a sorból: \"" + matLine + "\"");
         }
 
-        // Ellenőrizzük, hogy van-e extra adat a sorban
+        // Ellenőrizzük, hogy nincs-e extra adat
         std::string extra;
         if (iss >> extra)
         {
@@ -523,20 +454,22 @@ void loadModel(const std::string &path, ModelLibrary &model)
         fresh.materials.push_back(material);
       }
 
+      // Blokk lezárása kötelező: $EndMaterials
       if (!std::getline(input, line))
       {
-        throw_at_line(lineNo + 1, "Hiányzó $EndMaterials.");
+        throw_at_line(lineNo + 1, "Hiányzik a $EndMaterials sor.");
       }
       ++lineNo;
       std::string endLine = strip_comment(line);
       trim_inplace(endLine);
       if (endLine != "$EndMaterials")
       {
-        throw_at_line(lineNo, "Várt $EndMaterials, kapott: " + endLine);
+        throw_at_line(lineNo, "A $Materials blokkot $EndMaterials sorral kell zárni.");
       }
       continue;
     }
   }
 
+  // Sikeres betöltés után átmásoljuk az eredményt
   model = fresh;
 }

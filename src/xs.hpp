@@ -31,11 +31,11 @@ struct XsLibrary
   std::string title;
   int energyGroupCount = 0;
   std::vector<std::string> energyGroupNames;
-  std::vector<std::string> materialOrder;
   std::vector<XsMaterial> materials;
   std::vector<XsBoundary> boundaries;
 
   const XsMaterial::SPtr find_material(const std::string &name) const;
+  const XsBoundary *find_boundary(const std::string &name) const;
 };
 
 class XsError : public std::runtime_error

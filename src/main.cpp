@@ -314,12 +314,12 @@ int main(int argc, char **argv)
     }
 
     // Anyag nevek (verbosity >= 2)
-    if (xsVerbosity >= 2 && !xsLibrary.materialOrder.empty())
+    if (xsVerbosity >= 2 && !xsLibrary.materials.empty())
     {
-      std::cout << "  Anyagok (sorrend):";
-      for (std::size_t i = 0; i < xsLibrary.materialOrder.size(); ++i)
+      std::cout << "  Anyagok:";
+      for (std::size_t i = 0; i < xsLibrary.materials.size(); ++i)
       {
-        std::cout << " " << xsLibrary.materialOrder[i];
+        std::cout << " " << xsLibrary.materials[i].name;
       }
       std::cout << "\n";
     }
@@ -366,7 +366,6 @@ int main(int argc, char **argv)
         const XsBoundary &bound = xsLibrary.boundaries[i];
         std::cout << "    [" << bound.name << "]\n";
         std::cout << "      type: " << bound.type << "\n";
-        std::cout << "      value: " << bound.value << "\n";
       }
     }
 
@@ -504,10 +503,6 @@ int main(int argc, char **argv)
       {
         const Zone &zone = modelLibrary.zones[i];
         std::cout << "    [Zone: " << zone.name << "]\n";
-        if (!zone.description.empty())
-        {
-          std::cout << "      description: " << zone.description << "\n";
-        }
         std::cout << "      physical_groups (2D):";
         for (std::size_t j = 0; j < zone.physicalGroups.size(); ++j)
         {
@@ -524,10 +519,6 @@ int main(int argc, char **argv)
       {
         const Boundary &boundary = modelLibrary.boundaries[i];
         std::cout << "    [Boundary: " << boundary.name << "]\n";
-        if (!boundary.description.empty())
-        {
-          std::cout << "      description: " << boundary.description << "\n";
-        }
         std::cout << "      physical_groups (1D):";
         for (std::size_t j = 0; j < boundary.physicalGroups.size(); ++j)
         {
@@ -544,10 +535,6 @@ int main(int argc, char **argv)
       {
         const Mixture &mixture = modelLibrary.mixtures[i];
         std::cout << "    [Mixture: " << mixture.name << "]\n";
-        if (!mixture.description.empty())
-        {
-          std::cout << "      description: " << mixture.description << "\n";
-        }
         std::cout << "      density: " << mixture.density << " g/cm³\n";
 
         // Verbosity >= 3 VAGY mixture_details flag: Komponensek részletesen

@@ -10,14 +10,12 @@ struct Zone
 {
   std::string name;
   std::vector<std::string> physicalGroups; // 2D (térfogati) mesh physical group nevek
-  std::string description;                  // opcionális
 };
 
 struct Boundary
 {
   std::string name;
   std::vector<std::string> physicalGroups; // 1D (felületi/él) mesh physical group nevek
-  std::string description;                  // opcionális
 };
 
 // Anyag keverék komponens
@@ -32,7 +30,6 @@ struct Mixture
 {
   std::string name;
   double density;                           // g/cm³
-  std::string description;                  // opcionális
   std::vector<MixtureComponent> components;
 };
 

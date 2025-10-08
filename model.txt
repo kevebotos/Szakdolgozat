@@ -1,41 +1,59 @@
-# VVER-440 Model File (Gmsh-style format)
+# VVER-440 Model File
+# Ez a fájl definiálja a zónákat, peremeket, keverékeket és anyag-hozzárendeléseket
+# Formátum: GMSH-szerű blokk struktúra ($Section ... $EndSection)
+# Kommentek: # karakterrel kezdődnek
 
 $ModelInfo
 VVER-440 reactor model
 $EndModelInfo
 
-# Zones - 2D (térfogati) elemek
-# Formátum: név "physGroup1" ["physGroup2" ...] "leírás (minimum üres "")"
+# ==================================================
+# ZONES - Térfogati (2D) régiók definíciója
+# ==================================================
+# Formátum: ZoneName physGroupCount physGroup1 physGroup2 ...
+# A zone összeköti a logikai régiót a mesh fizikai csoportjaival
 $Zones
 5
-FuelRegion "Fuel" "Active fuel assembly region"
-CladdingRegion "Cladding" "Fuel cladding region"
-FuelCladRegion "Fuel" "Cladding" "Combined fuel and cladding region"
-ModeratorRegion "Moderator" "Water moderator region"
-ReflectorRegion "Reflector" "Reflector region around the core"
+FuelRegion 1 Fuel
+CladdingRegion 1 Cladding
+FuelCladRegion 2 Fuel Cladding
+ModeratorRegion 1 Moderator
+ReflectorRegion 1 Reflector
 $EndZones
 
-# Boundaries - 1D (felületi/él) elemek
-# Formátum: név "physGroup1" ["physGroup2" ...] "leírás"
+# ==================================================
+# BOUNDARIES - Felületi (1D) peremek definíciója
+# ==================================================
+# Formátum: BoundaryName physGroupCount physGroup1 physGroup2 ...
+# A boundary összeköti a logikai peremfeltételt a mesh fizikai csoportjaival
 $Boundaries
 4
-FuelCladInterface "Fuel-Clad" "Interface between fuel and cladding"
-CladModeratorInterface "Clad-Moderator" "Interface between cladding and moderator"
-ModeratorReflectorInterface "Moderator-Reflector" "Interface between moderator and reflector"
-OuterBoundary "Outer-Boundary" "Vacuum boundary at the outer edge"
+FuelCladInterface 1 Fuel-Clad
+CladModeratorInterface 1 Clad-Moderator
+ModeratorReflectorInterface 1 Moderator-Reflector
+OuterBoundary 1 Outer-Boundary
 $EndBoundaries
 
-# Mixtures - Anyagkeverékek elemi komponensekből
-# Formátum: név sűrűség "leírás" komponensszám elem1 atom1 elem2 atom2 ...
+# ==================================================
+# MIXTURES - Anyagkeverékek elemi komponensekből
+# ==================================================
+# Formátum: MixtureName density componentCount elem1 atoms1 elem2 atoms2 ...
+# density: anyagsűrűség [g/cm³]
+# componentCount: hány elemi komponensből áll
+# elemN: elem neve (pl. H, O, U235, U238, Zr)
+# atomsN: atomszám vagy koncentráció
 $Mixtures
 3
-Water 1.0 "Light water moderator (H2O)" 2 H 2.0 O 1.0
-UO2 10.97 "Uranium dioxide fuel (3.5% enriched)" 3 U235 0.07 U238 1.93 O 2.0
-Zircaloy 6.5 "Zirconium alloy cladding" 1 Zr 1.0
+Water 1.0 2 H 2.0 O 1.0
+UO2 10.97 3 U235 0.07 U238 1.93 O 2.0
+Zircaloy 6.5 1 Zr 1.0
 $EndMixtures
 
-# Materials - Zóna-anyag hozzárendelések
+# ==================================================
+# MATERIALS - Zóna → Keverék hozzárendelések
+# ==================================================
 # Formátum: ZoneName MixtureName
+# Megadja, hogy melyik zóna melyik anyagkeveréket használja
 $Materials
 4
 FuelRegion UO2
